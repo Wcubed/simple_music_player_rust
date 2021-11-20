@@ -11,6 +11,7 @@ use eframe::{egui, epi};
 struct App {
     library: Library,
     playlist: Playlist,
+    playlist_view: PlaylistView,
 }
 
 impl App {
@@ -18,6 +19,7 @@ impl App {
         Self {
             library: Library::new(),
             playlist: Playlist::new(),
+            playlist_view: PlaylistView::new(),
         }
     }
 
@@ -47,28 +49,6 @@ impl App {
         ui.end_row();
         add_song
     }
-
-    fn show_playlist(&mut self, ui: &mut Ui) {
-        let mut remove_song_indexes = Vec::new();
-
-        egui::Grid::new("playlist_grid")
-            .num_columns(2)
-            .min_col_width(1.0)
-            .striped(true)
-            .show(ui, |ui| {
-                for (idx, id) in self.playlist.song_ids().enumerate() {
-                    if let Some(song) = self.library.get_song(id) {
-                        ui.label(&song.title);
-                        if ui.button("x").clicked() {
-                            remove_song_indexes.push(idx);
-                        }
-                        ui.end_row();
-                    }
-                }
-            });
-
-        self.playlist.remove_songs_by_indexes(&remove_song_indexes);
-    }
 }
 
 impl epi::App for App {
@@ -77,7 +57,8 @@ impl epi::App for App {
             self.show_library(ui);
         });
         egui::CentralPanel::default().show(ctx, |ui| {
-            self.show_playlist(ui);
+            self.playlist_view
+                .show_playlist(ui, &mut self.playlist, &self.library)
         });
     }
 
@@ -95,7 +76,37 @@ impl epi::App for App {
     }
 
     fn name(&self) -> &str {
-        "Example egui App"
+        "Example egui self.show_playlist(ui);App"
+    }
+}
+
+struct PlaylistView {}
+
+impl PlaylistView {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    pub fn show_playlist(&self, ui: &mut Ui, playlist: &mut Playlist, library: &Library) {
+        let mut remove_song_indexes = Vec::new();
+
+        egui::Grid::new("playlist_grid")
+            .num_columns(2)
+            .min_col_width(1.0)
+            .striped(true)
+            .show(ui, |ui| {
+                for (idx, id) in playlist.song_ids().enumerate() {
+                    if let Some(song) = library.get_song(id) {
+                        ui.label(&song.title);
+                        if ui.button("x").clicked() {
+                            remove_song_indexes.push(idx);
+                        }
+                        ui.end_row();
+                    }
+                }
+            });
+
+        playlist.remove_songs_by_indexes(&remove_song_indexes);
     }
 }
 
