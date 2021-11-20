@@ -24,19 +24,17 @@ impl App {
     fn show_library(&mut self, ui: &mut Ui) {
         let mut add_songs = Vec::new();
 
-        ui.group(|ui| {
-            egui::Grid::new("library_grid")
-                .num_columns(2)
-                .min_col_width(1.0)
-                .striped(true)
-                .show(ui, |ui| {
-                    for (&id, song) in self.library.songs() {
-                        if self.show_library_song(ui, song) {
-                            add_songs.push(id);
-                        }
+        egui::Grid::new("library_grid")
+            .num_columns(2)
+            .min_col_width(1.0)
+            .striped(true)
+            .show(ui, |ui| {
+                for (&id, song) in self.library.songs() {
+                    if self.show_library_song(ui, song) {
+                        add_songs.push(id);
                     }
-                });
-        });
+                }
+            });
 
         self.playlist.add_songs(add_songs);
     }
@@ -53,23 +51,21 @@ impl App {
     fn show_playlist(&mut self, ui: &mut Ui) {
         let mut remove_song_indexes = Vec::new();
 
-        ui.group(|ui| {
-            egui::Grid::new("playlist_grid")
-                .num_columns(2)
-                .min_col_width(1.0)
-                .striped(true)
-                .show(ui, |ui| {
-                    for (idx, id) in self.playlist.song_ids().enumerate() {
-                        if let Some(song) = self.library.get_song(id) {
-                            ui.label(&song.title);
-                            if ui.button("x").clicked() {
-                                remove_song_indexes.push(idx);
-                            }
-                            ui.end_row();
+        egui::Grid::new("playlist_grid")
+            .num_columns(2)
+            .min_col_width(1.0)
+            .striped(true)
+            .show(ui, |ui| {
+                for (idx, id) in self.playlist.song_ids().enumerate() {
+                    if let Some(song) = self.library.get_song(id) {
+                        ui.label(&song.title);
+                        if ui.button("x").clicked() {
+                            remove_song_indexes.push(idx);
                         }
+                        ui.end_row();
                     }
-                });
-        });
+                }
+            });
 
         self.playlist.remove_songs_by_indexes(&remove_song_indexes);
     }
@@ -77,11 +73,11 @@ impl App {
 
 impl epi::App for App {
     fn update(&mut self, ctx: &CtxRef, _frame: &mut Frame<'_>) {
+        egui::SidePanel::right("library_panel").show(ctx, |ui| {
+            self.show_library(ui);
+        });
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                self.show_library(ui);
-                self.show_playlist(ui);
-            });
+            self.show_playlist(ui);
         });
     }
 
