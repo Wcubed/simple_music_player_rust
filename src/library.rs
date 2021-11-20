@@ -22,6 +22,10 @@ impl Library {
         self.songs.insert(self.next_id, song);
         self.next_id = self.next_id.next();
     }
+
+    pub fn get_song(&self, id: &SongId) -> Option<&Song> {
+        self.songs.get(id)
+    }
 }
 
 #[derive(Eq, PartialEq, Hash, Copy, Clone)]
@@ -35,4 +39,32 @@ impl SongId {
 
 pub struct Song {
     pub title: String,
+}
+
+pub struct Playlist {
+    songs: Vec<SongId>,
+}
+
+impl Playlist {
+    pub fn new() -> Self {
+        Self { songs: Vec::new() }
+    }
+
+    pub fn song_ids(&self) -> core::slice::Iter<'_, SongId> {
+        self.songs.iter()
+    }
+
+    pub fn add_song(&mut self, id: SongId) {
+        self.songs.push(id);
+    }
+
+    pub fn add_songs(&mut self, mut ids: Vec<SongId>) {
+        self.songs.append(&mut ids)
+    }
+
+    pub fn remove_songs_by_indexes(&mut self, indexes: &Vec<usize>) {
+        for &idx in indexes {
+            self.songs.remove(idx);
+        }
+    }
 }
