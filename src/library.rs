@@ -37,34 +37,65 @@ impl SongId {
     }
 }
 
+/// The ListEntryId is needed because we need a unique identifier for entries in the playlist.
+/// If we don't have those, it is hard to refer to a specific playlist entry after
+/// the order of the entries changed.
+#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
+pub struct ListEntryId(usize);
+
+impl ListEntryId {
+    fn next(&self) -> Self {
+        ListEntryId(self.0 + 1)
+    }
+}
+
 pub struct Song {
     pub title: String,
 }
 
 pub struct Playlist {
-    songs: Vec<SongId>,
+    songs: Vec<(ListEntryId, SongId)>,
+    next_entry_id: ListEntryId,
 }
 
 impl Playlist {
     pub fn new() -> Self {
-        Self { songs: Vec::new() }
+        Self {
+            songs: Vec::new(),
+            next_entry_id: ListEntryId(0),
+        }
     }
 
-    pub fn song_ids(&self) -> core::slice::Iter<'_, SongId> {
+    pub fn song_ids(&self) -> core::slice::Iter<'_, (ListEntryId, SongId)> {
         self.songs.iter()
     }
 
-    pub fn add_song(&mut self, id: SongId) {
-        self.songs.push(id);
+    pub fn add_song(&mut self, song_id: SongId) {
+        self.songs.push((self.next_entry_id, song_id));
+        self.next_entry_id = self.next_entry_id.next();
     }
 
-    pub fn add_songs(&mut self, mut ids: Vec<SongId>) {
-        self.songs.append(&mut ids)
+    pub fn add_songs(&mut self, mut song_ids: Vec<SongId>) {
+        for song_id in song_ids {
+            self.add_song(song_id);
+        }
     }
 
     pub fn remove_songs_by_indexes(&mut self, indexes: &Vec<usize>) {
         for &idx in indexes {
             self.songs.remove(idx);
         }
+    }
+
+    pub fn move_from_index_to_target_index(&mut self, from: usize, mut target: usize) {
+        if from >= self.songs.len() {
+            return;
+        }
+        if target >= from {
+            target -= 1;
+        }
+
+        let song_id = self.songs.remove(from);
+        self.songs.insert(target, song_id);
     }
 }
