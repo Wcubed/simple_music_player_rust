@@ -1,44 +1,47 @@
 #![forbid(unsafe_code)]
 #![warn(clippy::all, rust_2018_idioms)]
 
+mod library;
+
+use crate::library::{Library, Song};
 use eframe::egui::CtxRef;
-use eframe::epi::Frame;
+use eframe::epi::{Frame, Storage};
 use eframe::{egui, epi};
 
 struct App {
-    items: Vec<bool>,
+    library: Library,
 }
 
 impl App {
     fn new() -> Self {
-        Self { items: Vec::new() }
+        Self {
+            library: Library::new(),
+        }
     }
 }
 
 impl epi::App for App {
     fn update(&mut self, ctx: &CtxRef, _frame: &mut Frame<'_>) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Hello World!");
-
-            if ui.button("Add item").clicked() {
-                self.items.push(false);
-            }
-
-            let mut remove_item = None;
-
-            for (i, item) in self.items.iter_mut().enumerate() {
+            for (_id, song) in self.library.songs() {
                 ui.horizontal(|ui| {
-                    ui.checkbox(item, "Item");
-                    if ui.button("X").clicked() {
-                        remove_item = Some(i);
-                    }
+                    ui.label(&song.title);
                 });
             }
-
-            if let Some(i) = remove_item {
-                self.items.remove(i);
-            }
         });
+    }
+
+    fn setup(&mut self, _ctx: &CtxRef, _frame: &mut Frame<'_>, _storage: Option<&dyn Storage>) {
+        // Start with some songs for testing purposes.
+        self.library.add_song(Song {
+            title: "Blaaargh!!!".into(),
+        });
+        self.library.add_song(Song {
+            title: "Super epic metal song!".into(),
+        });
+        self.library.add_song(Song {
+            title: "Orchestral cover song".into(),
+        })
     }
 
     fn name(&self) -> &str {
