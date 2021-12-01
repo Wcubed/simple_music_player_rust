@@ -12,6 +12,7 @@ struct App {
     library: Library,
     playlist: Playlist,
     playlist_view: PlaylistView,
+    slider_value: f32,
 }
 
 impl App {
@@ -20,6 +21,7 @@ impl App {
             library: Library::new(),
             playlist: Playlist::new(),
             playlist_view: PlaylistView::new(),
+            slider_value: 0.0,
         }
     }
 
@@ -53,12 +55,18 @@ impl App {
 
 impl epi::App for App {
     fn update(&mut self, ctx: &CtxRef, _frame: &mut Frame<'_>) {
-        egui::SidePanel::right("library_panel").show(ctx, |ui| {
+        egui::SidePanel::right("right_panel").show(ctx, |ui| {
             self.show_library(ui);
         });
         egui::CentralPanel::default().show(ctx, |ui| {
             self.playlist_view
                 .show_playlist(ui, &mut self.playlist, &self.library)
+        });
+        egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                ui.label("Text");
+                ui.add(egui::ProgressBar::new(self.slider_value));
+            });
         });
     }
 
@@ -72,7 +80,7 @@ impl epi::App for App {
         });
         self.library.add_song(Song {
             title: "Orchestral cover song".into(),
-        })
+        });
     }
 
     fn name(&self) -> &str {

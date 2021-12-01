@@ -1,6 +1,7 @@
 use std::collections::hash_map::Iter;
 use std::collections::HashMap;
 
+#[derive(Debug)]
 pub struct Library {
     songs: HashMap<SongId, Song>,
     next_id: SongId,
@@ -18,17 +19,24 @@ impl Library {
         self.songs.iter()
     }
 
-    pub fn add_song(&mut self, song: Song) {
-        self.songs.insert(self.next_id, song);
+    pub fn add_song(&mut self, song: Song) -> SongId {
+        let id = self.next_id;
+        self.songs.insert(id, song);
         self.next_id = self.next_id.next();
+
+        id
     }
 
     pub fn get_song(&self, id: &SongId) -> Option<&Song> {
         self.songs.get(id)
     }
+
+    pub fn song_count(&self) -> usize {
+        self.songs.len()
+    }
 }
 
-#[derive(Eq, PartialEq, Hash, Copy, Clone)]
+#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
 pub struct SongId(usize);
 
 impl SongId {
@@ -49,10 +57,12 @@ impl ListEntryId {
     }
 }
 
+#[derive(Debug)]
 pub struct Song {
     pub title: String,
 }
 
+#[derive(Debug)]
 pub struct Playlist {
     songs: Vec<(ListEntryId, SongId)>,
     next_entry_id: ListEntryId,
@@ -97,5 +107,54 @@ impl Playlist {
 
         let song_id = self.songs.remove(from);
         self.songs.insert(target, song_id);
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::library::SongId;
+    use crate::{Library, Song};
+
+    #[test]
+    fn library_new_library_is_empty() {
+        let library = Library::new();
+        assert_eq!(library.song_count(), 0);
+
+        assert!(library.get_song(&SongId(0)).is_none());
+    }
+
+    #[test]
+    fn library_add_song_gives_unique_id() {
+        let mut library = Library::new();
+
+        let id1 = library.add_song(Song {
+            title: String::new(),
+        });
+        let id2 = library.add_song(Song {
+            title: String::new(),
+        });
+
+        assert_ne!(id1, id2);
+    }
+
+    #[test]
+    fn library_get_song() {
+        let mut library = Library::new();
+
+        let song_title1 = "title!";
+        let song_title2 = "another title";
+
+        let id1 = library.add_song(Song {
+            title: song_title1.to_owned(),
+        });
+        let id2 = library.add_song(Song {
+            title: song_title2.to_owned(),
+        });
+
+        let song1 = library.get_song(&id1).unwrap();
+        let song2 = library.get_song(&id2).unwrap();
+
+        assert_eq!(song1.title, song_title1);
+        assert_eq!(song2.title, song_title2);
     }
 }
