@@ -80,6 +80,21 @@ impl Playlist {
         self.songs.iter()
     }
 
+    pub fn length(&self) -> usize {
+        self.songs.len()
+    }
+
+    pub fn get_at_index(&self, index: usize) -> Option<&(ListEntryId, SongId)> {
+        self.songs.get(index)
+    }
+
+    pub fn get_song_ids(&self) -> Vec<SongId> {
+        self.songs
+            .iter()
+            .map(|(_entry, song_id)| *song_id)
+            .collect()
+    }
+
     pub fn add_song(&mut self, song_id: SongId) {
         self.songs.push((self.next_entry_id, song_id));
         self.next_entry_id = self.next_entry_id.next();
@@ -101,9 +116,6 @@ impl Playlist {
         if from >= self.songs.len() {
             return;
         }
-        if target >= from {
-            target -= 1;
-        }
 
         let song_id = self.songs.remove(from);
         self.songs.insert(target, song_id);
@@ -113,7 +125,7 @@ impl Playlist {
 #[cfg(test)]
 mod test {
     use crate::library::SongId;
-    use crate::{Library, Song};
+    use crate::{Library, Playlist, Song};
 
     #[test]
     fn library_new_library_is_empty() {
@@ -156,5 +168,54 @@ mod test {
 
         assert_eq!(song1.title, song_title1);
         assert_eq!(song2.title, song_title2);
+    }
+
+    #[test]
+    fn playlist_adds_songs_to_end() {
+        let mut play = Playlist::new();
+
+        let id1 = SongId(1);
+        let id2 = SongId(2);
+
+        play.add_song(id1);
+        play.add_song(id2);
+
+        assert_eq!(play.get_at_index(0).unwrap().1, id1);
+        assert_eq!(play.get_at_index(1).unwrap().1, id2);
+        assert_eq!(play.get_at_index(2), None);
+
+        let id3 = SongId(3);
+        play.add_song(id3);
+
+        assert_eq!(play.get_at_index(2).unwrap().1, id3);
+    }
+
+    #[test]
+    fn playlist_move_from_index_to_target_index() {
+        let mut play = Playlist::new();
+
+        let id1 = SongId(1);
+        let id2 = SongId(2);
+        let id3 = SongId(3);
+        let id4 = SongId(4);
+
+        play.add_song(id1);
+        play.add_song(id2);
+        play.add_song(id3);
+        play.add_song(id4);
+
+        assert_eq!(play.get_song_ids(), vec![id1, id2, id3, id4]);
+
+        play.move_from_index_to_target_index(3, 1);
+        assert_eq!(play.get_song_ids(), vec![id1, id4, id2, id3]);
+
+        play.move_from_index_to_target_index(17, 1);
+        assert_eq!(play.get_song_ids(), vec![id1, id4, id2, id3]);
+
+        play.move_from_index_to_target_index(0, 1);
+        assert_eq!(play.get_song_ids(), vec![id4, id1, id2, id3]);
+
+        play.move_from_index_to_target_index(0, 2);
+        assert_eq!(play.get_song_ids(), vec![id1, id2, id4, id3]);
     }
 }
