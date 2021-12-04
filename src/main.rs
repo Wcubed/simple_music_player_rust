@@ -3,6 +3,7 @@
 
 mod library;
 
+use crate::egui::Widget;
 use crate::library::{Library, ListEntryId, Playlist, Song};
 use eframe::egui::{CtxRef, CursorIcon, Id, Sense, Ui};
 use eframe::epi::{Frame, Storage};
@@ -139,7 +140,15 @@ impl PlaylistView {
                             }
                         }
 
-                        ui.label(&song.title);
+                        let mut label = egui::Label::new(&song.title);
+                        if let Some((dragged_id, _)) = self.dragged_item {
+                            if list_id == dragged_id {
+                                label =
+                                    label.text_color(ui.style().interact(&response).text_color());
+                            }
+                        }
+
+                        label.ui(ui);
                         if ui.button("x").clicked() {
                             remove_song_indexes.push(idx);
                         }
