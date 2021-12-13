@@ -1,19 +1,30 @@
 #![forbid(unsafe_code)]
 #![warn(clippy::all, rust_2018_idioms)]
 
+mod config;
 mod library;
 
-use crate::egui::Widget;
+use crate::config::Config;
 use crate::library::{Library, ListEntryId, Playlist, Song};
+use anyhow::{Context, Result};
+use eframe::egui::Widget;
 use eframe::egui::{CtxRef, CursorIcon, Id, Sense, Ui};
 use eframe::epi::{Frame, Storage};
 use eframe::{egui, epi};
+use log::warn;
+use log::LevelFilter;
+use simplelog::{ColorChoice, ConfigBuilder, TermLogger, TerminalMode};
+use std::fs::File;
+use std::io::{Read, Write};
+
+const SAVE_FILE_NAME: &str = "config.toml";
 
 struct App {
     library: Library,
     playlist: Playlist,
     playlist_view: PlaylistView,
     slider_value: f32,
+    config: Config,
 }
 
 impl App {
@@ -23,7 +34,28 @@ impl App {
             playlist: Playlist::new(),
             playlist_view: PlaylistView::new(),
             slider_value: 0.0,
+            config: Config::default(),
         }
+    }
+
+    fn save_config(&self) -> Result<()> {
+        let serialized = toml::to_string(&self.config)?;
+        let mut file = File::create(SAVE_FILE_NAME).context("Could not create config file")?;
+        file.write_all(serialized.as_bytes())
+            .context("Could not serialize config to toml format")?;
+
+        Ok(())
+    }
+
+    fn load_config(&mut self) -> Result<()> {
+        let mut file = File::open(SAVE_FILE_NAME).context("Could not open config file")?;
+        let mut serialized = String::new();
+        file.read_to_string(&mut serialized)
+            .context("Could not parse config toml")?;
+
+        self.config = toml::from_str(&serialized)?;
+
+        Ok(())
     }
 
     fn show_library(&mut self, ui: &mut Ui) {
@@ -72,6 +104,10 @@ impl epi::App for App {
     }
 
     fn setup(&mut self, _ctx: &CtxRef, _frame: &mut Frame<'_>, _storage: Option<&dyn Storage>) {
+        if let Err(e) = self.load_config() {
+            warn!("Encountered a problem while loading config: {}", e);
+        }
+
         // Start with some songs for testing purposes.
         self.library.add_song(Song {
             title: "Blaaargh!!!".into(),
@@ -168,7 +204,18 @@ impl PlaylistView {
     }
 }
 
-fn main() {
+fn main() -> Result<()> {
+    TermLogger::init(
+        LevelFilter::Warn,
+        ConfigBuilder::default()
+            .set_thread_level(LevelFilter::Trace)
+            .set_target_level(LevelFilter::Trace)
+            .build(),
+        TerminalMode::Mixed,
+        ColorChoice::Auto,
+    )
+    .unwrap();
+
     let app = App::new();
 
     let native_options = eframe::NativeOptions::default();
