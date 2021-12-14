@@ -1,5 +1,5 @@
 [package]
-name = "egui_standalone"
+name = "simple_music_player"
 version = "0.1.0"
 edition = "2021"
 

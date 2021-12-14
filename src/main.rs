@@ -120,6 +120,12 @@ impl epi::App for App {
         });
     }
 
+    fn on_exit(&mut self) {
+        if let Err(e) = self.save_config() {
+            warn!("Encountered a problem while saving config: {}", e);
+        }
+    }
+
     fn name(&self) -> &str {
         "Example egui App"
     }
