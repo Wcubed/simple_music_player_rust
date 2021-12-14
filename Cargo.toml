@@ -5,6 +5,14 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+name = "simple_music_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "simple_music_player"
+path = "src/bin/main.rs"
+
 [dependencies]
 eframe = "0.15.*"
 toml = "0.5.*"

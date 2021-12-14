@@ -1,7 +1,5 @@
-use crate::library::ListEntryId;
-use crate::{Id, Library, Playlist};
-use eframe::egui;
-use eframe::egui::{CursorIcon, Sense, Ui, Widget};
+use eframe::egui::{CursorIcon, Grid, Id, Label, Sense, Ui, Widget};
+use simple_music_lib::library::{Library, ListEntryId, Playlist, Song};
 
 pub struct PlaylistView {
     dragged_item: Option<(ListEntryId, usize)>,
@@ -25,7 +23,7 @@ impl PlaylistView {
 
         let mut move_dragged_item_to_target_idx = None;
 
-        egui::Grid::new("playlist_grid")
+        Grid::new("playlist_grid")
             .num_columns(3)
             .min_col_width(1.0)
             .striped(true)
@@ -54,7 +52,7 @@ impl PlaylistView {
                             }
                         }
 
-                        let mut label = egui::Label::new(&song.title);
+                        let mut label = Label::new(&song.title);
                         if let Some((dragged_id, _)) = self.dragged_item {
                             if list_id == dragged_id {
                                 label =

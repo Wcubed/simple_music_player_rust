@@ -1,5 +1,6 @@
 use std::collections::hash_map::Iter;
 use std::collections::HashMap;
+use std::path::Path;
 
 #[derive(Debug)]
 pub struct Library {
@@ -122,10 +123,11 @@ impl Playlist {
     }
 }
 
+pub fn scan_directory<P: AsRef<Path>>(directory: P) {}
+
 #[cfg(test)]
 mod test {
-    use crate::library::SongId;
-    use crate::{Library, Playlist, Song};
+    use crate::library::{Library, Playlist, Song, SongId};
 
     #[test]
     fn library_new_library_is_empty() {

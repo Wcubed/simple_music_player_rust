@@ -1,19 +1,17 @@
 #![forbid(unsafe_code)]
 #![warn(clippy::all, rust_2018_idioms)]
 
-mod config;
-mod library;
 mod ui;
 
-use crate::config::Config;
-use crate::library::{Library, Playlist, Song};
 use crate::ui::PlaylistView;
 use anyhow::{Context, Result};
-use eframe::egui::{CtxRef, Id, Sense, Ui};
+use eframe::egui::{CtxRef, Ui};
 use eframe::epi::{Frame, Storage};
 use eframe::{egui, epi};
 use log::warn;
 use log::LevelFilter;
+use simple_music_lib::config::Config;
+use simple_music_lib::library::{Library, Playlist, Song};
 use simplelog::{ColorChoice, ConfigBuilder, TermLogger, TerminalMode};
 use std::fs::File;
 use std::io::{Read, Write};
@@ -78,8 +76,7 @@ impl App {
     }
 
     fn show_library_song(&self, ui: &mut Ui, song: &Song) -> bool {
-        let mut add_song = false;
-        add_song = ui.button("+").clicked();
+        let add_song = ui.button("+").clicked();
         ui.label(&song.title);
 
         ui.end_row();
