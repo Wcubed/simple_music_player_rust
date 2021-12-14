@@ -100,19 +100,19 @@ impl Playlist {
         self.next_entry_id = self.next_entry_id.next();
     }
 
-    pub fn add_songs(&mut self, mut song_ids: Vec<SongId>) {
+    pub fn add_songs(&mut self, song_ids: Vec<SongId>) {
         for song_id in song_ids {
             self.add_song(song_id);
         }
     }
 
-    pub fn remove_songs_by_indexes(&mut self, indexes: &Vec<usize>) {
+    pub fn remove_songs_by_indexes(&mut self, indexes: &[usize]) {
         for &idx in indexes {
             self.songs.remove(idx);
         }
     }
 
-    pub fn move_from_index_to_target_index(&mut self, from: usize, mut target: usize) {
+    pub fn move_from_index_to_target_index(&mut self, from: usize, target: usize) {
         if from >= self.songs.len() {
             return;
         }
