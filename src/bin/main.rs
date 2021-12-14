@@ -15,6 +15,7 @@ use simple_music_lib::library::{Library, Playlist, Song};
 use simplelog::{ColorChoice, ConfigBuilder, TermLogger, TerminalMode};
 use std::fs::File;
 use std::io::{Read, Write};
+use std::path::PathBuf;
 
 const SAVE_FILE_NAME: &str = "config.toml";
 
@@ -109,12 +110,15 @@ impl epi::App for App {
         // Start with some songs for testing purposes.
         self.library.add_song(Song {
             title: "Blaaargh!!!".into(),
+            path: PathBuf::new(),
         });
         self.library.add_song(Song {
             title: "Super epic metal song!".into(),
+            path: PathBuf::new(),
         });
         self.library.add_song(Song {
             title: "Orchestral cover song".into(),
+            path: PathBuf::new(),
         });
     }
 

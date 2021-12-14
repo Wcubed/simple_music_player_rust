@@ -1,5 +1,5 @@
 use eframe::egui::{CursorIcon, Grid, Id, Label, Sense, Ui, Widget};
-use simple_music_lib::library::{Library, ListEntryId, Playlist, Song};
+use simple_music_lib::library::{Library, ListEntryId, Playlist};
 
 pub struct PlaylistView {
     dragged_item: Option<(ListEntryId, usize)>,

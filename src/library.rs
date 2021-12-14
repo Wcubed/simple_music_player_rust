@@ -1,6 +1,11 @@
+use anyhow::Result;
 use std::collections::hash_map::Iter;
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+use log::warn;
+
+const SONG_EXTENSION: &str = ".ogg";
 
 #[derive(Debug)]
 pub struct Library {
@@ -58,9 +63,10 @@ impl ListEntryId {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Song {
     pub title: String,
+    pub path: PathBuf,
 }
 
 #[derive(Debug)]
@@ -123,11 +129,63 @@ impl Playlist {
     }
 }
 
-pub fn scan_directory<P: AsRef<Path>>(directory: P) {}
+pub fn scan_directory_for_songs<P: AsRef<Path>>(dir: P) -> Result<Vec<Song>> {
+    let path = dir.as_ref();
+
+    if !path.exists() {
+        anyhow::bail!(
+            "Could not scan directory '{}', it does not exist.",
+            path.display()
+        );
+    }
+    if !path.is_dir() {
+        anyhow::bail!(
+            "Could not scan directory '{}', it is not a directory.",
+            path.display()
+        );
+    }
+
+    let glob_path = path.join("**").join("*".to_owned() + SONG_EXTENSION);
+
+    let mut songs = Vec::new();
+
+    for entry in glob::glob(glob_path.to_str().unwrap())
+        .expect("Failed to read glob pattern for scanning a directory for songs.")
+    {
+        match entry {
+            Ok(path) => {
+                if let Some(song) = song_from_file_path(path) {
+                    songs.push(song);
+                }
+            }
+            Err(e) => warn!("{}", e),
+        }
+    }
+
+    Ok(songs)
+}
+
+fn song_from_file_path<P: AsRef<Path>>(file_path: P) -> Option<Song> {
+    let path = PathBuf::from(file_path.as_ref());
+    match path.file_stem() {
+        Some(title) => Some(Song {
+            title: title.to_string_lossy().to_string(),
+            path,
+        }),
+        None => {
+            warn!(
+                "Could not extract song title from path '{}'.",
+                path.display()
+            );
+            None
+        }
+    }
+}
 
 #[cfg(test)]
 mod test {
     use crate::library::{Library, Playlist, Song, SongId};
+    use std::path::PathBuf;
 
     #[test]
     fn library_new_library_is_empty() {
@@ -143,9 +201,11 @@ mod test {
 
         let id1 = library.add_song(Song {
             title: String::new(),
+            path: PathBuf::new(),
         });
         let id2 = library.add_song(Song {
             title: String::new(),
+            path: PathBuf::new(),
         });
 
         assert_ne!(id1, id2);
@@ -160,9 +220,11 @@ mod test {
 
         let id1 = library.add_song(Song {
             title: song_title1.to_owned(),
+            path: PathBuf::new(),
         });
         let id2 = library.add_song(Song {
             title: song_title2.to_owned(),
+            path: PathBuf::new(),
         });
 
         let song1 = library.get_song(&id1).unwrap();
