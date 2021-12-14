@@ -3,5 +3,5 @@ use std::path::PathBuf;
 
 #[derive(Deserialize, Serialize, Default)]
 pub struct Config {
-    library: PathBuf,
+    pub library_directory: PathBuf,
 }

@@ -11,6 +11,7 @@ use eframe::{egui, epi};
 use log::warn;
 use log::LevelFilter;
 use simple_music_lib::config::Config;
+use simple_music_lib::library;
 use simple_music_lib::library::{Library, Playlist, Song};
 use simplelog::{ColorChoice, ConfigBuilder, TermLogger, TerminalMode};
 use std::fs::File;
@@ -107,19 +108,14 @@ impl epi::App for App {
             warn!("Encountered a problem while loading config: {}", e);
         }
 
-        // Start with some songs for testing purposes.
-        self.library.add_song(Song {
-            title: "Blaaargh!!!".into(),
-            path: PathBuf::new(),
-        });
-        self.library.add_song(Song {
-            title: "Super epic metal song!".into(),
-            path: PathBuf::new(),
-        });
-        self.library.add_song(Song {
-            title: "Orchestral cover song".into(),
-            path: PathBuf::new(),
-        });
+        if self.config.library_directory.is_dir() {
+            match library::scan_directory_for_songs(&self.config.library_directory) {
+                Ok(songs) => {
+                    self.library.add_songs(songs);
+                }
+                Err(e) => warn!("Something went wrong while scanning for songs: '{}'", e),
+            }
+        }
     }
 
     fn on_exit(&mut self) {

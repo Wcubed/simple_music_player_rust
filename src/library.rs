@@ -33,6 +33,12 @@ impl Library {
         id
     }
 
+    pub fn add_songs(&mut self, songs: Vec<Song>) {
+        for song in songs {
+            self.add_song(song);
+        }
+    }
+
     pub fn get_song(&self, id: &SongId) -> Option<&Song> {
         self.songs.get(id)
     }
