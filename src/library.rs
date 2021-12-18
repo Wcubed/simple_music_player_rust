@@ -48,6 +48,12 @@ impl Library {
     }
 }
 
+impl Default for Library {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
 pub struct SongId(usize);
 
@@ -132,6 +138,12 @@ impl Playlist {
 
         let song_id = self.songs.remove(from);
         self.songs.insert(target, song_id);
+    }
+}
+
+impl Default for Playlist {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
