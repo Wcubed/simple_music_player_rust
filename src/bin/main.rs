@@ -10,13 +10,13 @@ use eframe::epi::{Frame, Storage};
 use eframe::{egui, epi};
 use log::warn;
 use log::LevelFilter;
+use rodio::{OutputStream, OutputStreamHandle};
 use simple_music_lib::config::Config;
 use simple_music_lib::library;
 use simple_music_lib::library::{Library, Playlist, Song};
 use simplelog::{ColorChoice, ConfigBuilder, TermLogger, TerminalMode};
 use std::fs::File;
 use std::io::{Read, Write};
-use std::path::PathBuf;
 
 const SAVE_FILE_NAME: &str = "config.toml";
 
@@ -26,17 +26,23 @@ struct App {
     playlist_view: PlaylistView,
     slider_value: f32,
     config: Config,
+    _output_stream: OutputStream,
+    stream_handle: OutputStreamHandle,
 }
 
 impl App {
-    fn new() -> Self {
-        Self {
+    fn new() -> Result<Self> {
+        let (stream, stream_handle) = OutputStream::try_default()?;
+
+        Ok(Self {
             library: Library::new(),
             playlist: Playlist::new(),
             playlist_view: PlaylistView::new(),
             slider_value: 0.0,
             config: Config::default(),
-        }
+            _output_stream: stream,
+            stream_handle,
+        })
     }
 
     fn save_config(&self) -> Result<()> {
@@ -116,6 +122,10 @@ impl epi::App for App {
                 Err(e) => warn!("Something went wrong while scanning for songs: '{}'", e),
             }
         }
+
+        if let Some((_, song)) = self.library.songs().next() {
+            library::play_song_from_file(&song.path, &self.stream_handle);
+        }
     }
 
     fn on_exit(&mut self) {
@@ -144,5 +154,5 @@ fn main() -> Result<()> {
     let app = App::new();
 
     let native_options = eframe::NativeOptions::default();
-    eframe::run_native(Box::new(app), native_options);
+    eframe::run_native(Box::new(app?), native_options);
 }

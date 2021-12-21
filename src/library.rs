@@ -1,9 +1,12 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::collections::hash_map::Iter;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
 use log::warn;
+use rodio::{Decoder, OutputStreamHandle, Source};
 
 const SONG_EXTENSION: &str = ".ogg";
 
@@ -198,6 +201,18 @@ fn song_from_file_path<P: AsRef<Path>>(file_path: P) -> Option<Song> {
             None
         }
     }
+}
+
+pub fn play_song_from_file(path: &Path, stream_handle: &OutputStreamHandle) -> Result<()> {
+    let file = BufReader::new(File::open(path).context(format!(
+        "Could not open song file to play: '{}'",
+        path.display()
+    ))?);
+
+    let source = Decoder::new(file)?;
+    stream_handle.play_raw(source.convert_samples())?;
+
+    Ok(())
 }
 
 #[cfg(test)]
