@@ -122,6 +122,10 @@ impl Playlist {
         self.next_entry_id = self.next_entry_id.next();
     }
 
+    pub fn song_count(&self) -> usize {
+        self.songs.len()
+    }
+
     pub fn add_songs(&mut self, song_ids: Vec<SongId>) {
         for song_id in song_ids {
             self.add_song(song_id);
@@ -271,11 +275,15 @@ mod test {
     fn playlist_adds_songs_to_end() {
         let mut play = Playlist::new();
 
+        assert_eq!(play.song_count(), 0);
+
         let id1 = SongId(1);
         let id2 = SongId(2);
 
         play.add_song(id1);
         play.add_song(id2);
+
+        assert_eq!(play.song_count(), 2);
 
         assert_eq!(play.get_at_index(0).unwrap().1, id1);
         assert_eq!(play.get_at_index(1).unwrap().1, id2);

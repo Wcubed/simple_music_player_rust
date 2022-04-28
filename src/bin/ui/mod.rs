@@ -1,3 +1,4 @@
+use crate::egui;
 use eframe::egui::{CursorIcon, Grid, Id, RichText, Sense, Ui};
 use simple_music_lib::library::{Library, ListEntryId, Playlist};
 
@@ -23,50 +24,72 @@ impl PlaylistView {
 
         let mut move_dragged_item_to_target_idx = None;
 
-        Grid::new("playlist_grid")
-            .num_columns(3)
-            .min_col_width(1.0)
-            .striped(true)
-            .show(ui, |ui| {
-                for (idx, &(list_id, song_id)) in playlist.song_ids().enumerate() {
-                    if let Some(song) = library.get_song(&song_id) {
-                        let id_source = "playlist_drag";
-                        let ui_id = Id::new(id_source).with(list_id);
+        let text_style = egui::TextStyle::Body;
+        let row_height = ui.text_style_height(&text_style);
 
-                        let rect = ui.label("::").rect;
-                        let response = ui.interact(rect, ui_id, Sense::drag());
+        egui::ScrollArea::both().show_rows(
+            ui,
+            row_height,
+            playlist.song_count(),
+            |ui, row_range| {
+                Grid::new("playlist_grid")
+                    .num_columns(3)
+                    .start_row(row_range.start)
+                    .min_col_width(1.0)
+                    .striped(true)
+                    .show(ui, |ui| {
+                        for (idx, &(list_id, song_id)) in playlist
+                            .song_ids()
+                            .enumerate()
+                            .skip(row_range.start)
+                            .take(row_range.end)
+                        {
+                            if let Some(song) = library.get_song(&song_id) {
+                                let id_source = "playlist_drag";
+                                let ui_id = Id::new(id_source).with(list_id);
 
-                        if response.drag_started() {
-                            self.dragged_item = Some((list_id, idx));
-                        } else if response.hovered() && !ui.memory().is_anything_being_dragged() {
-                            ui.output().cursor_icon = CursorIcon::Grab;
-                        }
+                                let rect = ui.label("::").rect;
+                                let response = ui.interact(rect, ui_id, Sense::drag());
 
-                        if let Some((dragged_id, _)) = self.dragged_item {
-                            if dragged_id != list_id {
-                                if let Some(last_pos) = ui.input().pointer.hover_pos() {
-                                    if last_pos.y >= rect.top() && last_pos.y <= rect.bottom() {
-                                        move_dragged_item_to_target_idx = Some(idx);
+                                if response.drag_started() {
+                                    self.dragged_item = Some((list_id, idx));
+                                } else if response.hovered()
+                                    && !ui.memory().is_anything_being_dragged()
+                                {
+                                    ui.output().cursor_icon = CursorIcon::Grab;
+                                }
+
+                                if let Some((dragged_id, _)) = self.dragged_item {
+                                    if dragged_id != list_id {
+                                        if let Some(last_pos) = ui.input().pointer.hover_pos() {
+                                            if last_pos.y >= rect.top()
+                                                && last_pos.y <= rect.bottom()
+                                            {
+                                                move_dragged_item_to_target_idx = Some(idx);
+                                            }
+                                        }
                                     }
                                 }
+
+                                if ui.button("x").clicked() {
+                                    remove_song_indexes.push(idx);
+                                }
+
+                                let mut label = RichText::new(&song.title);
+                                if let Some((dragged_id, _)) = self.dragged_item {
+                                    if list_id == dragged_id {
+                                        label = label
+                                            .color(ui.style().interact(&response).text_color());
+                                    }
+                                }
+
+                                ui.label(label);
+                                ui.end_row();
                             }
                         }
-
-                        let mut label = RichText::new(&song.title);
-                        if let Some((dragged_id, _)) = self.dragged_item {
-                            if list_id == dragged_id {
-                                label = label.color(ui.style().interact(&response).text_color());
-                            }
-                        }
-
-                        ui.label(label);
-                        if ui.button("x").clicked() {
-                            remove_song_indexes.push(idx);
-                        }
-                        ui.end_row();
-                    }
-                }
-            });
+                    });
+            },
+        );
 
         if let (Some((item_id, from_index)), Some(target)) =
             (self.dragged_item, move_dragged_item_to_target_idx)

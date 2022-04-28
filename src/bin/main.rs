@@ -3,6 +3,7 @@
 
 mod ui;
 
+use crate::egui::Label;
 use crate::ui::PlaylistView;
 use anyhow::{Context, Result};
 use eframe::egui::Ui;
@@ -68,24 +69,42 @@ impl App {
     fn show_library(&mut self, ui: &mut Ui) {
         let mut add_songs = Vec::new();
 
-        egui::Grid::new("library_grid")
-            .num_columns(2)
-            .min_col_width(1.0)
-            .striped(true)
-            .show(ui, |ui| {
-                for (&id, song) in self.library.songs() {
-                    if self.show_library_song(ui, song) {
-                        add_songs.push(id);
-                    }
-                }
-            });
+        let text_style = egui::TextStyle::Body;
+        let row_height = ui.text_style_height(&text_style);
+
+        egui::ScrollArea::both()
+            .auto_shrink([false, false])
+            .show_rows(
+                ui,
+                row_height,
+                self.library.song_count(),
+                |ui, row_range| {
+                    egui::Grid::new("library_grid")
+                        .num_columns(2)
+                        .start_row(row_range.start)
+                        .min_col_width(1.0)
+                        .striped(true)
+                        .show(ui, |ui| {
+                            for (&id, song) in self
+                                .library
+                                .songs()
+                                .skip(row_range.start)
+                                .take(row_range.end)
+                            {
+                                if self.show_library_song(ui, song) {
+                                    add_songs.push(id);
+                                }
+                            }
+                        });
+                },
+            );
 
         self.playlist.add_songs(add_songs);
     }
 
     fn show_library_song(&self, ui: &mut Ui, song: &Song) -> bool {
         let add_song = ui.button("+").clicked();
-        ui.label(&song.title);
+        ui.add(Label::new(&song.title).wrap(false));
 
         ui.end_row();
         add_song
@@ -94,18 +113,21 @@ impl App {
 
 impl epi::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &Frame) {
-        egui::SidePanel::right("right_panel").show(ctx, |ui| {
-            self.show_library(ui);
-        });
-        egui::CentralPanel::default().show(ctx, |ui| {
-            self.playlist_view
-                .show_playlist(ui, &mut self.playlist, &self.library)
-        });
         egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.label("Text");
                 ui.add(egui::ProgressBar::new(self.slider_value));
             });
+        });
+        egui::SidePanel::right("right_panel")
+            .resizable(true)
+            .min_width(10.0)
+            .show(ctx, |ui| {
+                self.show_library(ui);
+            });
+        egui::CentralPanel::default().show(ctx, |ui| {
+            self.playlist_view
+                .show_playlist(ui, &mut self.playlist, &self.library)
         });
     }
 
@@ -124,7 +146,7 @@ impl epi::App for App {
         }
 
         if let Some((_, song)) = self.library.songs().next() {
-            library::play_song_from_file(&song.path, &self.stream_handle);
+            //library::play_song_from_file(&song.path, &self.stream_handle);
         }
     }
 
