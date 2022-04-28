@@ -14,7 +14,7 @@ name = "simple_music_player"
 path = "src/bin/main.rs"
 
 [dependencies]
-eframe = "0.15.*"
+eframe = "0.17.*"
 toml = "0.5.*"
 serde = "1.0.*"
 serde_derive = "1.0.*"

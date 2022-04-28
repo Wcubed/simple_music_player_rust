@@ -5,7 +5,7 @@ mod ui;
 
 use crate::ui::PlaylistView;
 use anyhow::{Context, Result};
-use eframe::egui::{CtxRef, Ui};
+use eframe::egui::Ui;
 use eframe::epi::{Frame, Storage};
 use eframe::{egui, epi};
 use log::warn;
@@ -93,7 +93,7 @@ impl App {
 }
 
 impl epi::App for App {
-    fn update(&mut self, ctx: &CtxRef, _frame: &mut Frame<'_>) {
+    fn update(&mut self, ctx: &egui::Context, _frame: &Frame) {
         egui::SidePanel::right("right_panel").show(ctx, |ui| {
             self.show_library(ui);
         });
@@ -109,7 +109,7 @@ impl epi::App for App {
         });
     }
 
-    fn setup(&mut self, _ctx: &CtxRef, _frame: &mut Frame<'_>, _storage: Option<&dyn Storage>) {
+    fn setup(&mut self, _ctx: &egui::Context, _frame: &Frame, _storage: Option<&dyn Storage>) {
         if let Err(e) = self.load_config() {
             warn!("Encountered a problem while loading config: {}", e);
         }

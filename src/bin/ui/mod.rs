@@ -1,4 +1,4 @@
-use eframe::egui::{CursorIcon, Grid, Id, Label, Sense, Ui, Widget};
+use eframe::egui::{CursorIcon, Grid, Id, RichText, Sense, Ui};
 use simple_music_lib::library::{Library, ListEntryId, Playlist};
 
 pub struct PlaylistView {
@@ -52,15 +52,14 @@ impl PlaylistView {
                             }
                         }
 
-                        let mut label = Label::new(&song.title);
+                        let mut label = RichText::new(&song.title);
                         if let Some((dragged_id, _)) = self.dragged_item {
                             if list_id == dragged_id {
-                                label =
-                                    label.text_color(ui.style().interact(&response).text_color());
+                                label = label.color(ui.style().interact(&response).text_color());
                             }
                         }
 
-                        label.ui(ui);
+                        ui.label(label);
                         if ui.button("x").clicked() {
                             remove_song_indexes.push(idx);
                         }
