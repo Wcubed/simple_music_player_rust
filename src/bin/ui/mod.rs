@@ -27,11 +27,9 @@ impl PlaylistView {
         let text_style = egui::TextStyle::Body;
         let row_height = ui.text_style_height(&text_style);
 
-        egui::ScrollArea::both().show_rows(
-            ui,
-            row_height,
-            playlist.song_count(),
-            |ui, row_range| {
+        egui::ScrollArea::both()
+            .auto_shrink([false, false])
+            .show_rows(ui, row_height, playlist.song_count(), |ui, row_range| {
                 Grid::new("playlist_grid")
                     .num_columns(3)
                     .start_row(row_range.start)
@@ -83,13 +81,12 @@ impl PlaylistView {
                                     }
                                 }
 
-                                ui.label(label);
+                                ui.label(label).on_hover_text(&song.title);
                                 ui.end_row();
                             }
                         }
                     });
-            },
-        );
+            });
 
         if let (Some((item_id, from_index)), Some(target)) =
             (self.dragged_item, move_dragged_item_to_target_idx)

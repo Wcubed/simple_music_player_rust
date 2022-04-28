@@ -104,7 +104,7 @@ impl App {
 
     fn show_library_song(&self, ui: &mut Ui, song: &Song) -> bool {
         let add_song = ui.button("+").clicked();
-        ui.add(Label::new(&song.title).wrap(false));
+        ui.label(&song.title).on_hover_text(&song.title);
 
         ui.end_row();
         add_song
