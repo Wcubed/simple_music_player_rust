@@ -11,14 +11,16 @@ impl PlaylistView {
         Self { dragged_item: None }
     }
 
+    /// Returns `Some` when there is a request to play a song.
     pub fn show_playlist(
         &mut self,
         ui: &mut Ui,
         playlist: &mut Playlist,
         library: &Library,
         current_selected_entry: Option<(ListEntryId, SongId)>,
-    ) {
+    ) -> Option<(ListEntryId, SongId)> {
         let mut remove_song_indexes = Vec::new();
+        let mut request_play = None;
 
         if !ui.memory().is_anything_being_dragged() {
             self.dragged_item = None
@@ -79,20 +81,23 @@ impl PlaylistView {
                                     remove_song_indexes.push(idx);
                                 }
 
-                                let mut label = RichText::new(&song.title);
+                                let mut label_text = RichText::new(&song.title);
                                 if let Some((dragged_id, _)) = self.dragged_item {
                                     if list_id == dragged_id {
-                                        label = label
+                                        label_text = label_text
                                             .color(ui.style().interact(&response).text_color());
                                     }
                                 }
 
                                 if Some((list_id, song_id)) == current_selected_entry {
-                                    label =
-                                        label.color(ui.style().interact(&response).text_color());
+                                    label_text = label_text
+                                        .color(ui.style().interact(&response).text_color());
                                 }
 
-                                ui.label(label).on_hover_text(&song.title);
+                                let label = egui::Label::new(label_text).sense(Sense::click());
+                                if ui.add(label).on_hover_text(&song.title).clicked() {
+                                    request_play = Some((list_id, song_id));
+                                }
                                 ui.end_row();
                             }
                         }
@@ -107,5 +112,7 @@ impl PlaylistView {
         }
 
         playlist.remove_songs_by_indexes(&remove_song_indexes);
+
+        request_play
     }
 }

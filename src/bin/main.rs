@@ -166,12 +166,16 @@ impl epi::App for App {
                 self.show_library(ui);
             });
         egui::CentralPanel::default().show(ctx, |ui| {
-            self.playlist_view.show_playlist(
+            let request_play = self.playlist_view.show_playlist(
                 ui,
                 &mut self.playlist,
                 &self.library,
                 self.playlist_selected_song,
-            )
+            );
+
+            if let Some(entry) = request_play {
+                self.play_playlist_entry(entry);
+            }
         });
     }
 
