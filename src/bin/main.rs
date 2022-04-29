@@ -11,7 +11,7 @@ use eframe::epi::{Frame, Storage};
 use eframe::{egui, epi};
 use log::warn;
 use log::LevelFilter;
-use rodio::{OutputStream, OutputStreamHandle};
+use rodio::{OutputStream, OutputStreamHandle, Sink};
 use simple_music_lib::config::Config;
 use simple_music_lib::library;
 use simple_music_lib::library::{Library, ListEntryId, Playlist, Song, SongId};
@@ -29,12 +29,15 @@ struct App {
     slider_value: f32,
     config: Config,
     _output_stream: OutputStream,
-    stream_handle: OutputStreamHandle,
+    _stream_handle: OutputStreamHandle,
+    audio_sink: Sink,
 }
 
 impl App {
     fn new() -> Result<Self> {
         let (stream, stream_handle) = OutputStream::try_default()?;
+        let sink = Sink::try_new(&stream_handle)?;
+        sink.pause();
 
         Ok(Self {
             library: Library::new(),
@@ -44,7 +47,8 @@ impl App {
             slider_value: 0.0,
             config: Config::default(),
             _output_stream: stream,
-            stream_handle,
+            _stream_handle: stream_handle,
+            audio_sink: sink,
         })
     }
 
@@ -128,7 +132,7 @@ impl App {
 
     fn play_playlist_entry(&mut self, entry: (ListEntryId, SongId)) {
         if let Some(song) = self.library.get_song(&entry.1) {
-            match library::play_song_from_file(&song.path, &self.stream_handle) {
+            match library::play_song_from_file(&song.path, &self.audio_sink) {
                 Ok(()) => self.playlist_selected_song = Some(entry),
                 Err(e) => warn!("Could not play song `{}`: {}", song.path.display(), e),
             }
@@ -140,9 +144,18 @@ impl epi::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &Frame) {
         egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                if ui.button(">").clicked() {
-                    self.play_next_song();
+                if self.audio_sink.is_paused() {
+                    if ui.button(">").clicked() {
+                        if self.audio_sink.empty() {
+                            self.play_next_song();
+                        } else {
+                            self.audio_sink.play();
+                        }
+                    }
+                } else if ui.button("||").clicked() {
+                    self.audio_sink.pause();
                 }
+
                 ui.add(egui::ProgressBar::new(self.slider_value));
             });
         });
