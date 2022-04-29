@@ -1,4 +1,5 @@
 use crate::egui;
+use crate::egui::Color32;
 use eframe::egui::{CursorIcon, Grid, Id, RichText, Sense, Ui};
 use simple_music_lib::library::{Library, ListEntryId, Playlist, SongId};
 
@@ -90,8 +91,7 @@ impl PlaylistView {
                                 }
 
                                 if Some((list_id, song_id)) == current_selected_entry {
-                                    label_text = label_text
-                                        .color(ui.style().interact(&response).text_color());
+                                    label_text = label_text.color(Color32::LIGHT_BLUE);
                                 }
 
                                 let label = egui::Label::new(label_text).sense(Sense::click());

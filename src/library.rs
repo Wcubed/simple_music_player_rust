@@ -3,12 +3,10 @@ use std::collections::hash_map::Iter;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
-use std::ops::Index;
 use std::path::{Path, PathBuf};
 
-use crate::memory_source::MemorySource;
 use log::warn;
-use rodio::{Decoder, OutputStreamHandle, Sink, Source};
+use rodio::{Decoder, Sink};
 
 const SONG_EXTENSION: &str = ".ogg";
 

@@ -3,7 +3,6 @@
 
 mod ui;
 
-use crate::egui::Label;
 use crate::ui::PlaylistView;
 use anyhow::{Context, Result};
 use eframe::egui::Ui;
@@ -29,7 +28,7 @@ struct App {
     slider_value: f32,
     config: Config,
     _output_stream: OutputStream,
-    _stream_handle: OutputStreamHandle,
+    stream_handle: OutputStreamHandle,
     audio_sink: Sink,
 }
 
@@ -47,7 +46,7 @@ impl App {
             slider_value: 0.0,
             config: Config::default(),
             _output_stream: stream,
-            _stream_handle: stream_handle,
+            stream_handle: stream_handle,
             audio_sink: sink,
         })
     }
@@ -132,6 +131,14 @@ impl App {
 
     fn play_playlist_entry(&mut self, entry: (ListEntryId, SongId)) {
         if let Some(song) = self.library.get_song(&entry.1) {
+            // `Sink.stop()` should clear out the sink, and logically should allow playing a
+            // new song. But after calling `stop()` the sink won't play anymore.
+            // So we simply construct a new sink.
+            self.audio_sink.stop();
+            // TODO (Wybe 2022-04-29): Do something other than panic.
+            self.audio_sink = Sink::try_new(&self.stream_handle)
+                .unwrap_or_else(|e| panic!("Could not make a new audio sink: {}", e));
+
             match library::play_song_from_file(&song.path, &self.audio_sink) {
                 Ok(()) => self.playlist_selected_song = Some(entry),
                 Err(e) => warn!("Could not play song `{}`: {}", song.path.display(), e),
