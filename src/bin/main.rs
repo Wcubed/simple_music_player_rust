@@ -3,7 +3,8 @@
 
 mod ui;
 
-use crate::ui::PlaylistView;
+use crate::ui::library::LibraryView;
+use crate::ui::playlist::PlaylistView;
 use anyhow::{Context, Result};
 use eframe::egui::Ui;
 use eframe::epi::{Frame, Storage};
@@ -25,6 +26,7 @@ struct App {
     playlist: Playlist,
     playlist_selected_song: Option<(ListEntryId, SongId)>,
     playlist_view: PlaylistView,
+    library_view: LibraryView,
     slider_value: f32,
     config: Config,
     _output_stream: OutputStream,
@@ -43,10 +45,11 @@ impl App {
             playlist: Playlist::new(),
             playlist_selected_song: None,
             playlist_view: PlaylistView::new(),
+            library_view: LibraryView::new(),
             slider_value: 0.0,
             config: Config::default(),
             _output_stream: stream,
-            stream_handle: stream_handle,
+            stream_handle,
             audio_sink: sink,
         })
     }
@@ -72,47 +75,9 @@ impl App {
     }
 
     fn show_library(&mut self, ui: &mut Ui) {
-        let mut add_songs = Vec::new();
-
-        let text_style = egui::TextStyle::Body;
-        let row_height = ui.text_style_height(&text_style);
-
-        egui::ScrollArea::both()
-            .auto_shrink([false, false])
-            .show_rows(
-                ui,
-                row_height,
-                self.library.song_count(),
-                |ui, row_range| {
-                    egui::Grid::new("library_grid")
-                        .num_columns(2)
-                        .start_row(row_range.start)
-                        .min_col_width(1.0)
-                        .striped(true)
-                        .show(ui, |ui| {
-                            for (&id, song) in self
-                                .library
-                                .songs()
-                                .skip(row_range.start)
-                                .take(row_range.end)
-                            {
-                                if self.show_library_song(ui, song) {
-                                    add_songs.push(id);
-                                }
-                            }
-                        });
-                },
-            );
+        let add_songs = self.library_view.show_library(ui);
 
         self.playlist.add_songs(add_songs);
-    }
-
-    fn show_library_song(&self, ui: &mut Ui, song: &Song) -> bool {
-        let add_song = ui.button("+").clicked();
-        ui.label(&song.title).on_hover_text(&song.title);
-
-        ui.end_row();
-        add_song
     }
 
     /// Returns None if no song could be played.
@@ -195,6 +160,7 @@ impl epi::App for App {
             match library::scan_directory_for_songs(&self.config.library_directory) {
                 Ok(songs) => {
                     self.library.add_songs(songs);
+                    self.library_view.update_items(&self.library);
                 }
                 Err(e) => warn!("Something went wrong while scanning for songs: '{}'", e),
             }
