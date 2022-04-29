@@ -95,7 +95,9 @@ impl PlaylistView {
                                 }
 
                                 let label = egui::Label::new(label_text).sense(Sense::click());
-                                if ui.add(label).on_hover_text(&song.title).clicked() {
+                                if ui.add(label).on_hover_text(&song.title).clicked()
+                                    && Some((list_id, song_id)) != current_selected_entry
+                                {
                                     request_play = Some((list_id, song_id));
                                 }
                                 ui.end_row();
