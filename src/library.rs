@@ -3,6 +3,7 @@ use std::collections::hash_map::Iter;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
+use std::ops::Index;
 use std::path::{Path, PathBuf};
 
 use log::warn;
@@ -146,6 +147,19 @@ impl Playlist {
         let song_id = self.songs.remove(from);
         self.songs.insert(target, song_id);
     }
+
+    /// Returns None if there is no next entry, or if the given entry is not in the playlist.
+    pub fn get_next_entry(&self, current_entry: ListEntryId) -> Option<(ListEntryId, SongId)> {
+        if let Some(idx) = self.songs.iter().position(|(id, _)| id == &current_entry) {
+            self.songs.get(idx + 1).copied()
+        } else {
+            None
+        }
+    }
+
+    pub fn get_first_entry(&self) -> Option<(ListEntryId, SongId)> {
+        self.songs.first().copied()
+    }
 }
 
 impl Default for Playlist {
@@ -221,7 +235,7 @@ pub fn play_song_from_file(path: &Path, stream_handle: &OutputStreamHandle) -> R
 
 #[cfg(test)]
 mod test {
-    use crate::library::{Library, Playlist, Song, SongId};
+    use crate::library::{Library, ListEntryId, Playlist, Song, SongId};
     use std::path::PathBuf;
 
     #[test]
@@ -273,54 +287,101 @@ mod test {
 
     #[test]
     fn playlist_adds_songs_to_end() {
-        let mut play = Playlist::new();
+        let mut list = Playlist::new();
 
-        assert_eq!(play.song_count(), 0);
+        assert_eq!(list.song_count(), 0);
 
         let id1 = SongId(1);
         let id2 = SongId(2);
 
-        play.add_song(id1);
-        play.add_song(id2);
+        list.add_song(id1);
+        list.add_song(id2);
 
-        assert_eq!(play.song_count(), 2);
+        assert_eq!(list.song_count(), 2);
 
-        assert_eq!(play.get_at_index(0).unwrap().1, id1);
-        assert_eq!(play.get_at_index(1).unwrap().1, id2);
-        assert_eq!(play.get_at_index(2), None);
+        assert_eq!(list.get_at_index(0).unwrap().1, id1);
+        assert_eq!(list.get_at_index(1).unwrap().1, id2);
+        assert_eq!(list.get_at_index(2), None);
 
         let id3 = SongId(3);
-        play.add_song(id3);
+        list.add_song(id3);
 
-        assert_eq!(play.get_at_index(2).unwrap().1, id3);
+        assert_eq!(list.get_at_index(2).unwrap().1, id3);
     }
 
     #[test]
     fn playlist_move_from_index_to_target_index() {
-        let mut play = Playlist::new();
+        let mut list = Playlist::new();
 
         let id1 = SongId(1);
         let id2 = SongId(2);
         let id3 = SongId(3);
         let id4 = SongId(4);
 
-        play.add_song(id1);
-        play.add_song(id2);
-        play.add_song(id3);
-        play.add_song(id4);
+        list.add_song(id1);
+        list.add_song(id2);
+        list.add_song(id3);
+        list.add_song(id4);
 
-        assert_eq!(play.get_song_ids(), vec![id1, id2, id3, id4]);
+        assert_eq!(list.get_song_ids(), vec![id1, id2, id3, id4]);
 
-        play.move_from_index_to_target_index(3, 1);
-        assert_eq!(play.get_song_ids(), vec![id1, id4, id2, id3]);
+        list.move_from_index_to_target_index(3, 1);
+        assert_eq!(list.get_song_ids(), vec![id1, id4, id2, id3]);
 
-        play.move_from_index_to_target_index(17, 1);
-        assert_eq!(play.get_song_ids(), vec![id1, id4, id2, id3]);
+        list.move_from_index_to_target_index(17, 1);
+        assert_eq!(list.get_song_ids(), vec![id1, id4, id2, id3]);
 
-        play.move_from_index_to_target_index(0, 1);
-        assert_eq!(play.get_song_ids(), vec![id4, id1, id2, id3]);
+        list.move_from_index_to_target_index(0, 1);
+        assert_eq!(list.get_song_ids(), vec![id4, id1, id2, id3]);
 
-        play.move_from_index_to_target_index(0, 2);
-        assert_eq!(play.get_song_ids(), vec![id1, id2, id4, id3]);
+        list.move_from_index_to_target_index(0, 2);
+        assert_eq!(list.get_song_ids(), vec![id1, id2, id4, id3]);
+    }
+
+    #[test]
+    fn playlist_get_next_entry_returns_none_when_no_songs() {
+        let list = Playlist::new();
+
+        assert_eq!(list.get_next_entry(ListEntryId(0)), None);
+    }
+
+    #[test]
+    fn playlist_get_next_entry_returns_none_when_at_end() {
+        let mut list = Playlist::new();
+
+        let id1 = SongId(1);
+
+        list.add_song(id1);
+
+        let first = list.get_first_entry().unwrap();
+        assert_eq!(first.1, id1);
+
+        let next = list.get_next_entry(first.0);
+        assert_eq!(next, None);
+    }
+
+    #[test]
+    fn playlist_get_next_entry_returns_next_entry() {
+        let mut list = Playlist::new();
+
+        let id1 = SongId(1);
+        let id2 = SongId(2);
+        let id3 = SongId(3);
+        let id4 = SongId(4);
+
+        list.add_song(id1);
+        list.add_song(id2);
+        list.add_song(id3);
+        list.add_song(id4);
+
+        let first = list.get_first_entry().unwrap();
+        assert_eq!(first.1, id1);
+
+        let next = list.get_next_entry(first.0).unwrap();
+        assert_eq!(next.1, id2);
+        let next = list.get_next_entry(next.0).unwrap();
+        assert_eq!(next.1, id3);
+        let next = list.get_next_entry(next.0).unwrap();
+        assert_eq!(next.1, id4);
     }
 }

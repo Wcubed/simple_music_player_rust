@@ -1,6 +1,6 @@
 use crate::egui;
 use eframe::egui::{CursorIcon, Grid, Id, RichText, Sense, Ui};
-use simple_music_lib::library::{Library, ListEntryId, Playlist};
+use simple_music_lib::library::{Library, ListEntryId, Playlist, SongId};
 
 pub struct PlaylistView {
     dragged_item: Option<(ListEntryId, usize)>,
@@ -11,7 +11,13 @@ impl PlaylistView {
         Self { dragged_item: None }
     }
 
-    pub fn show_playlist(&mut self, ui: &mut Ui, playlist: &mut Playlist, library: &Library) {
+    pub fn show_playlist(
+        &mut self,
+        ui: &mut Ui,
+        playlist: &mut Playlist,
+        library: &Library,
+        current_selected_entry: Option<(ListEntryId, SongId)>,
+    ) {
         let mut remove_song_indexes = Vec::new();
 
         if !ui.memory().is_anything_being_dragged() {
@@ -79,6 +85,11 @@ impl PlaylistView {
                                         label = label
                                             .color(ui.style().interact(&response).text_color());
                                     }
+                                }
+
+                                if Some((list_id, song_id)) == current_selected_entry {
+                                    label =
+                                        label.color(ui.style().interact(&response).text_color());
                                 }
 
                                 ui.label(label).on_hover_text(&song.title);

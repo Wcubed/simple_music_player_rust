@@ -14,7 +14,7 @@ use log::LevelFilter;
 use rodio::{OutputStream, OutputStreamHandle};
 use simple_music_lib::config::Config;
 use simple_music_lib::library;
-use simple_music_lib::library::{Library, Playlist, Song};
+use simple_music_lib::library::{Library, ListEntryId, Playlist, Song, SongId};
 use simplelog::{ColorChoice, ConfigBuilder, TermLogger, TerminalMode};
 use std::fs::File;
 use std::io::{Read, Write};
@@ -24,6 +24,7 @@ const SAVE_FILE_NAME: &str = "config.toml";
 struct App {
     library: Library,
     playlist: Playlist,
+    playlist_selected_song: Option<(ListEntryId, SongId)>,
     playlist_view: PlaylistView,
     slider_value: f32,
     config: Config,
@@ -38,6 +39,7 @@ impl App {
         Ok(Self {
             library: Library::new(),
             playlist: Playlist::new(),
+            playlist_selected_song: None,
             playlist_view: PlaylistView::new(),
             slider_value: 0.0,
             config: Config::default(),
@@ -109,13 +111,38 @@ impl App {
         ui.end_row();
         add_song
     }
+
+    /// Returns None if no song could be played.
+    /// Returns Some(song) if a song is now playing.
+    fn play_next_song(&mut self) {
+        let next_entry = if let Some(cur_entry) = self.playlist_selected_song {
+            self.playlist.get_next_entry(cur_entry.0)
+        } else {
+            self.playlist.get_first_entry()
+        };
+
+        if let Some(entry) = next_entry {
+            self.play_playlist_entry(entry);
+        }
+    }
+
+    fn play_playlist_entry(&mut self, entry: (ListEntryId, SongId)) {
+        if let Some(song) = self.library.get_song(&entry.1) {
+            match library::play_song_from_file(&song.path, &self.stream_handle) {
+                Ok(()) => self.playlist_selected_song = Some(entry),
+                Err(e) => warn!("Could not play song `{}`: {}", song.path.display(), e),
+            }
+        }
+    }
 }
 
 impl epi::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &Frame) {
         egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                ui.label("Text");
+                if ui.button(">").clicked() {
+                    self.play_next_song();
+                }
                 ui.add(egui::ProgressBar::new(self.slider_value));
             });
         });
@@ -126,8 +153,12 @@ impl epi::App for App {
                 self.show_library(ui);
             });
         egui::CentralPanel::default().show(ctx, |ui| {
-            self.playlist_view
-                .show_playlist(ui, &mut self.playlist, &self.library)
+            self.playlist_view.show_playlist(
+                ui,
+                &mut self.playlist,
+                &self.library,
+                self.playlist_selected_song,
+            )
         });
     }
 
@@ -143,10 +174,6 @@ impl epi::App for App {
                 }
                 Err(e) => warn!("Something went wrong while scanning for songs: '{}'", e),
             }
-        }
-
-        if let Some((_, song)) = self.library.songs().next() {
-            //library::play_song_from_file(&song.path, &self.stream_handle);
         }
     }
 
