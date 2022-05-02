@@ -3,6 +3,12 @@ use crate::egui::Color32;
 use egui::{CursorIcon, Grid, Id, RichText, Sense, Ui};
 use simple_music_lib::library::{Library, ListEntryId, Playlist, SongId};
 
+pub enum PlaylistAction {
+    None,
+    PlaySong((ListEntryId, SongId)),
+    RemoveSong(ListEntryId),
+}
+
 pub struct PlaylistView {
     dragged_item: Option<(ListEntryId, usize)>,
 }
@@ -12,16 +18,14 @@ impl PlaylistView {
         Self { dragged_item: None }
     }
 
-    /// Returns `Some` when there is a request to play a song.
-    pub fn show_playlist(
+    pub fn show(
         &mut self,
         ui: &mut Ui,
         playlist: &mut Playlist,
         library: &Library,
         current_selected_entry: Option<(ListEntryId, SongId)>,
-    ) -> Option<(ListEntryId, SongId)> {
-        let mut remove_song_indexes = Vec::new();
-        let mut request_play = None;
+    ) -> PlaylistAction {
+        let mut action = PlaylistAction::None;
 
         if !ui.memory().is_anything_being_dragged() {
             self.dragged_item = None
@@ -79,7 +83,7 @@ impl PlaylistView {
                                 }
 
                                 if ui.button("x").clicked() {
-                                    remove_song_indexes.push(idx);
+                                    action = PlaylistAction::RemoveSong(list_id);
                                 }
 
                                 let mut label_text = RichText::new(&song.title);
@@ -98,7 +102,7 @@ impl PlaylistView {
                                 if ui.add(label).on_hover_text(&song.title).clicked()
                                     && Some((list_id, song_id)) != current_selected_entry
                                 {
-                                    request_play = Some((list_id, song_id));
+                                    action = PlaylistAction::PlaySong((list_id, song_id));
                                 }
                                 ui.end_row();
                             }
@@ -113,8 +117,6 @@ impl PlaylistView {
             self.dragged_item = Some((item_id, target));
         }
 
-        playlist.remove_songs_by_indexes(&remove_song_indexes);
-
-        request_play
+        action
     }
 }

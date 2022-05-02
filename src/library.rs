@@ -132,8 +132,8 @@ impl Playlist {
         }
     }
 
-    pub fn remove_songs_by_indexes(&mut self, indexes: &[usize]) {
-        for &idx in indexes {
+    pub fn remove_song(&mut self, entry_id: ListEntryId) {
+        if let Some(idx) = self.songs.iter().position(|(id, _)| id == &entry_id) {
             self.songs.remove(idx);
         }
     }
@@ -159,10 +159,12 @@ impl Playlist {
     /// Returns None if there is no previous entry, or if the given entry is not in the playlist.
     pub fn get_previous_entry(&self, current_entry: ListEntryId) -> Option<(ListEntryId, SongId)> {
         if let Some(idx) = self.songs.iter().position(|(id, _)| id == &current_entry) {
-            self.songs.get(idx - 1).copied()
-        } else {
-            None
+            if idx != 0 {
+                return self.songs.get(idx - 1).copied();
+            }
         }
+
+        None
     }
 
     pub fn get_first_entry(&self) -> Option<(ListEntryId, SongId)> {
@@ -320,6 +322,25 @@ mod test {
         list.add_song(id3);
 
         assert_eq!(list.get_at_index(2).unwrap().1, id3);
+    }
+
+    #[test]
+    fn playlist_remove_song() {
+        let mut list = Playlist::new();
+
+        let id1 = SongId(1);
+        let id2 = SongId(2);
+
+        list.add_song(id1);
+        list.add_song(id2);
+
+        assert_eq!(list.song_count(), 2);
+
+        list.remove_song(list.get_last_entry().unwrap().0);
+
+        assert_eq!(list.song_count(), 1);
+
+        assert_eq!(list.get_first_entry().unwrap().1, id1);
     }
 
     #[test]

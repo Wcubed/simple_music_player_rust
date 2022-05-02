@@ -4,7 +4,7 @@
 mod ui;
 
 use crate::ui::library::LibraryView;
-use crate::ui::playlist::PlaylistView;
+use crate::ui::playlist::{PlaylistAction, PlaylistView};
 use anyhow::{Context, Result};
 use eframe::egui::Ui;
 use eframe::epi::{Frame, Storage};
@@ -168,15 +168,26 @@ impl epi::App for App {
                 self.show_library(ui);
             });
         egui::CentralPanel::default().show(ctx, |ui| {
-            let request_play = self.playlist_view.show_playlist(
+            let action = self.playlist_view.show(
                 ui,
                 &mut self.playlist,
                 &self.library,
                 self.playlist_selected_song,
             );
 
-            if let Some(entry) = request_play {
-                self.play_playlist_entry(entry);
+            match action {
+                PlaylistAction::PlaySong(entry) => {
+                    self.play_playlist_entry(entry);
+                }
+                PlaylistAction::RemoveSong(remove_id) => {
+                    if let Some((selected_id, _)) = self.playlist_selected_song {
+                        if selected_id == remove_id {
+                            self.play_next_song();
+                        }
+                    }
+                    self.playlist.remove_song(remove_id)
+                }
+                PlaylistAction::None => {}
             }
         });
     }
