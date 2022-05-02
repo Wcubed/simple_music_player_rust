@@ -150,7 +150,11 @@ impl Playlist {
     /// Returns None if there is no next entry, or if the given entry is not in the playlist.
     pub fn get_next_entry(&self, current_entry: ListEntryId) -> Option<(ListEntryId, SongId)> {
         if let Some(idx) = self.songs.iter().position(|(id, _)| id == &current_entry) {
-            self.songs.get(idx + 1).copied()
+            if idx < self.songs.len() - 1 {
+                self.songs.get(idx + 1).copied()
+            } else {
+                self.get_first_entry()
+            }
         } else {
             None
         }
@@ -160,11 +164,13 @@ impl Playlist {
     pub fn get_previous_entry(&self, current_entry: ListEntryId) -> Option<(ListEntryId, SongId)> {
         if let Some(idx) = self.songs.iter().position(|(id, _)| id == &current_entry) {
             if idx != 0 {
-                return self.songs.get(idx - 1).copied();
+                self.songs.get(idx - 1).copied()
+            } else {
+                self.get_last_entry()
             }
+        } else {
+            None
         }
-
-        None
     }
 
     pub fn get_first_entry(&self) -> Option<(ListEntryId, SongId)> {
@@ -325,6 +331,21 @@ mod test {
     }
 
     #[test]
+    fn playlist_entry_ids_are_unique() {
+        let mut list = Playlist::new();
+        let id1 = SongId(1);
+        let id2 = SongId(2);
+
+        list.add_song(id1);
+        list.add_song(id2);
+
+        assert_ne!(
+            list.get_at_index(0).unwrap().0,
+            list.get_at_index(1).unwrap().0
+        );
+    }
+
+    #[test]
     fn playlist_remove_song() {
         let mut list = Playlist::new();
 
@@ -393,21 +414,6 @@ mod test {
     }
 
     #[test]
-    fn playlist_get_next_entry_returns_none_when_at_end() {
-        let mut list = Playlist::new();
-
-        let id1 = SongId(1);
-
-        list.add_song(id1);
-
-        let first = list.get_first_entry().unwrap();
-        assert_eq!(first.1, id1);
-
-        let next = list.get_next_entry(first.0);
-        assert_eq!(next, None);
-    }
-
-    #[test]
     fn playlist_get_next_entry_returns_next_entry() {
         let mut list = Playlist::new();
 
@@ -430,6 +436,10 @@ mod test {
         assert_eq!(next.1, id3);
         let next = list.get_next_entry(next.0).unwrap();
         assert_eq!(next.1, id4);
+
+        // `get_next_entry` wraps when at the end.
+        let should_be_first = list.get_next_entry(next.0).unwrap();
+        assert_eq!(should_be_first.1, id1);
     }
 
     #[test]
@@ -456,6 +466,7 @@ mod test {
         let prev = list.get_previous_entry(prev.0).unwrap();
         assert_eq!(prev.1, id1);
 
-        assert_eq!(list.get_previous_entry(prev.0), None);
+        // `get_previous_entry` wraps when at the start.
+        assert_eq!(list.get_previous_entry(prev.0).unwrap().1, id4);
     }
 }
