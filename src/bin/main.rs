@@ -80,8 +80,6 @@ impl App {
         self.playlist.add_songs(add_songs);
     }
 
-    /// Returns None if no song could be played.
-    /// Returns Some(song) if a song is now playing.
     fn play_next_song(&mut self) {
         let next_entry = if let Some(cur_entry) = self.playlist_selected_song {
             self.playlist.get_next_entry(cur_entry.0)
@@ -94,8 +92,22 @@ impl App {
         }
     }
 
+    fn play_previous_song(&mut self) {
+        let next_entry = if let Some(cur_entry) = self.playlist_selected_song {
+            self.playlist.get_previous_entry(cur_entry.0)
+        } else {
+            self.playlist.get_last_entry()
+        };
+
+        if let Some(entry) = next_entry {
+            self.play_playlist_entry(entry);
+        }
+    }
+
     fn play_playlist_entry(&mut self, entry: (ListEntryId, SongId)) {
         if let Some(song) = self.library.get_song(&entry.1) {
+            let volume = self.audio_sink.volume();
+
             // `Sink.stop()` should clear out the sink, and logically should allow playing a
             // new song. But after calling `stop()` the sink won't play anymore.
             // So we simply construct a new sink.
@@ -104,32 +116,50 @@ impl App {
             self.audio_sink = Sink::try_new(&self.stream_handle)
                 .unwrap_or_else(|e| panic!("Could not make a new audio sink: {}", e));
 
+            self.audio_sink.set_volume(volume);
+
             match library::play_song_from_file(&song.path, &self.audio_sink) {
                 Ok(()) => self.playlist_selected_song = Some(entry),
                 Err(e) => warn!("Could not play song `{}`: {}", song.path.display(), e),
             }
         }
     }
+
+    fn show_playback_controls(&mut self, ui: &mut Ui) {
+        ui.horizontal(|ui| {
+            if ui.button("|<").clicked() {
+                self.play_previous_song();
+            }
+
+            if self.audio_sink.is_paused() {
+                if ui.button(">").clicked() {
+                    if self.audio_sink.empty() {
+                        self.play_next_song();
+                    } else {
+                        self.audio_sink.play();
+                    }
+                }
+            } else if ui.button("||").clicked() {
+                self.audio_sink.pause();
+            }
+
+            if ui.button(">|").clicked() {
+                self.play_next_song();
+            }
+
+            let mut volume = self.audio_sink.volume();
+            ui.add(egui::Slider::new(&mut volume, 0.0..=1.0).show_value(false));
+            self.audio_sink.set_volume(volume);
+
+            ui.add(egui::ProgressBar::new(self.slider_value));
+        });
+    }
 }
 
 impl epi::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &Frame) {
         egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                if self.audio_sink.is_paused() {
-                    if ui.button(">").clicked() {
-                        if self.audio_sink.empty() {
-                            self.play_next_song();
-                        } else {
-                            self.audio_sink.play();
-                        }
-                    }
-                } else if ui.button("||").clicked() {
-                    self.audio_sink.pause();
-                }
-
-                ui.add(egui::ProgressBar::new(self.slider_value));
-            });
+            self.show_playback_controls(ui);
         });
         egui::SidePanel::right("right_panel")
             .resizable(true)

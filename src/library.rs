@@ -156,8 +156,21 @@ impl Playlist {
         }
     }
 
+    /// Returns None if there is no previous entry, or if the given entry is not in the playlist.
+    pub fn get_previous_entry(&self, current_entry: ListEntryId) -> Option<(ListEntryId, SongId)> {
+        if let Some(idx) = self.songs.iter().position(|(id, _)| id == &current_entry) {
+            self.songs.get(idx - 1).copied()
+        } else {
+            None
+        }
+    }
+
     pub fn get_first_entry(&self) -> Option<(ListEntryId, SongId)> {
         self.songs.first().copied()
+    }
+
+    pub fn get_last_entry(&self) -> Option<(ListEntryId, SongId)> {
+        self.songs.last().copied()
     }
 }
 
@@ -310,6 +323,19 @@ mod test {
     }
 
     #[test]
+    fn playlist_get_last_entry() {
+        let mut list = Playlist::new();
+
+        let id1 = SongId(1);
+        let id2 = SongId(2);
+
+        list.add_song(id1);
+        list.add_song(id2);
+
+        assert_eq!(list.get_last_entry().unwrap().1, id2);
+    }
+
+    #[test]
     fn playlist_move_from_index_to_target_index() {
         let mut list = Playlist::new();
 
@@ -383,5 +409,32 @@ mod test {
         assert_eq!(next.1, id3);
         let next = list.get_next_entry(next.0).unwrap();
         assert_eq!(next.1, id4);
+    }
+
+    #[test]
+    fn playlist_get_previous_entry_returns_previous_entry() {
+        let mut list = Playlist::new();
+
+        let id1 = SongId(1);
+        let id2 = SongId(2);
+        let id3 = SongId(3);
+        let id4 = SongId(4);
+
+        list.add_song(id1);
+        list.add_song(id2);
+        list.add_song(id3);
+        list.add_song(id4);
+
+        let last = list.get_last_entry().unwrap();
+        assert_eq!(last.1, id4);
+
+        let prev = list.get_previous_entry(last.0).unwrap();
+        assert_eq!(prev.1, id3);
+        let prev = list.get_previous_entry(prev.0).unwrap();
+        assert_eq!(prev.1, id2);
+        let prev = list.get_previous_entry(prev.0).unwrap();
+        assert_eq!(prev.1, id1);
+
+        assert_eq!(list.get_previous_entry(prev.0), None);
     }
 }
