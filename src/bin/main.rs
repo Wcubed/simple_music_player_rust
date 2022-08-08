@@ -3,21 +3,21 @@
 
 mod ui;
 
-use crate::egui::{Rgba, Vec2, Visuals};
 use crate::ui::library::LibraryView;
 use crate::ui::playlist::{PlaylistAction, PlaylistView};
+use crate::ui::time_label;
 use anyhow::Result;
-use eframe::egui::{Frame, Ui};
-use eframe::{egui, App, IntegrationInfo, Storage};
+use eframe::egui::{Ui, Visuals};
+use eframe::{egui, App, Storage};
+use log::warn;
 use log::LevelFilter;
-use log::{info, warn};
 use rfd::FileDialog;
 use simple_music_lib::config::Config;
 use simple_music_lib::library;
-use simple_music_lib::library::{Library, ListEntryId, Playlist, Song, SongId};
+use simple_music_lib::library::{Library, ListEntryId, Playlist, SongId};
 use simple_music_lib::playback::Playback;
 use simplelog::{ColorChoice, ConfigBuilder, TermLogger, TerminalMode};
-use std::path::Path;
+use std::time::Duration;
 
 struct MusicApp {
     library: Library,
@@ -25,7 +25,6 @@ struct MusicApp {
     playlist_selected_song: Option<(ListEntryId, SongId)>,
     playlist_view: PlaylistView,
     library_view: LibraryView,
-    slider_value: f32,
     config: Config,
     playback: Playback,
 }
@@ -55,7 +54,6 @@ impl MusicApp {
             playlist_selected_song: None,
             playlist_view: PlaylistView::new(),
             library_view: LibraryView::new(),
-            slider_value: 0.0,
             config,
             playback: Playback::new(),
         };
@@ -134,7 +132,9 @@ impl MusicApp {
                 self.play_previous_song();
             }
 
-            if self.playback.is_paused() {
+            let paused = self.playback.is_paused();
+
+            if paused {
                 if ui.button(">").clicked() {
                     if self.playlist_selected_song.is_some() {
                         self.playback.unpause();
@@ -154,7 +154,19 @@ impl MusicApp {
             ui.add(egui::Slider::new(&mut volume, 0..=100).show_value(false));
             self.playback.set_volume(volume);
 
-            ui.add(egui::ProgressBar::new(self.slider_value));
+            let seconds_played = self.playback.current_song_seconds_played();
+            let total_length = self.playback.current_song_length_in_seconds();
+
+            time_label(ui, seconds_played);
+            time_label(ui, total_length);
+
+            let fraction_played = seconds_played as f32 / total_length as f32;
+
+            ui.add(egui::ProgressBar::new(fraction_played));
+
+            if !paused {
+                // TODO: repaint every second.
+            }
         });
     }
 }

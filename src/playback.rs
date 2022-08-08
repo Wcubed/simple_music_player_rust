@@ -1,10 +1,12 @@
-use libmpv::{FileState, Mpv};
-use log::{error, warn};
+use libmpv::{FileState, Mpv, MpvNode};
+use log::{error, info, warn};
 use std::path::Path;
 
 const PROP_VOLUME: &str = "volume";
 const PROP_PAUSE: &str = "pause";
 const PROP_VIDEO_OUTPUT: &str = "vo";
+const PROP_PLAYBACK_TIME: &str = "playback-time";
+const PROP_SONG_DURATION: &str = "duration";
 
 pub struct Playback {
     mpv: Mpv,
@@ -29,6 +31,9 @@ impl Playback {
             Ok(_) => {}
             Err(e) => warn!("Could not pause: {}", e),
         }
+
+        let state: MpvNode = self.mpv.get_property("demuxer-cache-state").unwrap();
+        info!("{:?}", state);
     }
 
     pub fn unpause(&self) {
@@ -46,6 +51,15 @@ impl Playback {
         self.mpv
             .set_property(PROP_VOLUME, volume)
             .expect("Could not set volume");
+    }
+
+    ///  how much of the song has been played.
+    pub fn current_song_seconds_played(&self) -> u64 {
+        self.mpv.get_property(PROP_PLAYBACK_TIME).unwrap_or(0) as u64
+    }
+
+    pub fn current_song_length_in_seconds(&self) -> u64 {
+        self.mpv.get_property(PROP_SONG_DURATION).unwrap_or(0) as u64
     }
 }
 

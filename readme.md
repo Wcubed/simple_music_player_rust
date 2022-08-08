@@ -1,3 +1,5 @@
+Uses [mpv](https://mpv.io/) as back-end for playing the music.
+
 # Building
 
 For more info on the mpv part of the build, see the [libmpv-rs](https://github.com/ParadoxSpiral/libmpv-rs) github readme.
