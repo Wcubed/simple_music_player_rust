@@ -6,7 +6,6 @@ use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
 use log::warn;
-use rodio::{Decoder, Sink};
 
 const SONG_EXTENSION: &str = ".ogg";
 
@@ -239,19 +238,6 @@ fn song_from_file_path<P: AsRef<Path>>(file_path: P) -> Option<Song> {
             None
         }
     }
-}
-
-pub fn play_song_from_file(path: &Path, sink: &Sink) -> Result<()> {
-    let file = BufReader::new(File::open(path).context(format!(
-        "Could not open song file to play: '{}'",
-        path.display()
-    ))?);
-
-    let decoder = Decoder::new(file)?;
-    sink.append(decoder);
-    sink.play();
-
-    Ok(())
 }
 
 #[cfg(test)]

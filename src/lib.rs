@@ -3,4 +3,4 @@
 
 pub mod config;
 pub mod library;
-pub mod memory_source;
+pub mod playback;

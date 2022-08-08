@@ -3,25 +3,23 @@
 
 mod ui;
 
+use crate::egui::{Rgba, Vec2, Visuals};
 use crate::ui::library::LibraryView;
 use crate::ui::playlist::{PlaylistAction, PlaylistView};
-use anyhow::{Context, Result};
-use eframe::egui::Ui;
-use eframe::epi::{Frame, Storage};
-use eframe::{egui, epi};
-use log::warn;
+use anyhow::Result;
+use eframe::egui::{Frame, Ui};
+use eframe::{egui, App, IntegrationInfo, Storage};
 use log::LevelFilter;
-use rodio::{OutputStream, OutputStreamHandle, Sink};
+use log::{info, warn};
+use rfd::FileDialog;
 use simple_music_lib::config::Config;
 use simple_music_lib::library;
 use simple_music_lib::library::{Library, ListEntryId, Playlist, Song, SongId};
+use simple_music_lib::playback::Playback;
 use simplelog::{ColorChoice, ConfigBuilder, TermLogger, TerminalMode};
-use std::fs::File;
-use std::io::{Read, Write};
+use std::path::Path;
 
-const SAVE_FILE_NAME: &str = "config.toml";
-
-struct App {
+struct MusicApp {
     library: Library,
     playlist: Playlist,
     playlist_selected_song: Option<(ListEntryId, SongId)>,
@@ -29,52 +27,68 @@ struct App {
     library_view: LibraryView,
     slider_value: f32,
     config: Config,
-    _output_stream: OutputStream,
-    stream_handle: OutputStreamHandle,
-    audio_sink: Sink,
+    playback: Playback,
 }
 
-impl App {
-    fn new() -> Result<Self> {
-        let (stream, stream_handle) = OutputStream::try_default()?;
-        let sink = Sink::try_new(&stream_handle)?;
-        sink.pause();
+impl MusicApp {
+    fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        let config = if let Some(storage) = cc.storage {
+            eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
+        } else {
+            Default::default()
+        };
 
-        Ok(Self {
+        let visuals = if let Some(dark_mode) = cc.integration_info.prefer_dark_mode {
+            if dark_mode {
+                Visuals::dark()
+            } else {
+                Visuals::light()
+            }
+        } else {
+            Visuals::dark()
+        };
+        cc.egui_ctx.set_visuals(visuals);
+
+        let mut app = Self {
             library: Library::new(),
             playlist: Playlist::new(),
             playlist_selected_song: None,
             playlist_view: PlaylistView::new(),
             library_view: LibraryView::new(),
             slider_value: 0.0,
-            config: Config::default(),
-            _output_stream: stream,
-            stream_handle,
-            audio_sink: sink,
-        })
+            config,
+            playback: Playback::new(),
+        };
+
+        app.scan_library_dir();
+
+        app
     }
 
-    fn save_config(&self) -> Result<()> {
-        let serialized = toml::to_string(&self.config)?;
-        let mut file = File::create(SAVE_FILE_NAME).context("Could not create config file")?;
-        file.write_all(serialized.as_bytes())
-            .context("Could not serialize config to toml format")?;
-
-        Ok(())
-    }
-
-    fn load_config(&mut self) -> Result<()> {
-        let mut file = File::open(SAVE_FILE_NAME).context("Could not open config file")?;
-        let mut serialized = String::new();
-        file.read_to_string(&mut serialized)
-            .context("Could not parse config toml")?;
-
-        self.config = toml::from_str(&serialized)?;
-
-        Ok(())
+    /// Scans the library directory for songs.
+    /// TODO: remove any songs that are no longer in the directory, add any that are new,
+    ///       and update those that are already in the library.
+    fn scan_library_dir(&mut self) {
+        if self.config.library_directory.is_dir() {
+            match library::scan_directory_for_songs(&self.config.library_directory) {
+                Ok(songs) => {
+                    self.library.add_songs(songs);
+                    self.library_view.update_items(&self.library);
+                }
+                Err(e) => warn!("Something went wrong while scanning for songs: '{}'", e),
+            }
+        }
     }
 
     fn show_library(&mut self, ui: &mut Ui) {
+        if ui.button("Select library directory").clicked() {
+            if let Some(dir) = FileDialog::new().pick_folder() {
+                // TODO: let the user know when error occured, with a pop-up or something like that.
+                self.config.library_directory = dir;
+                self.scan_library_dir();
+            }
+        }
+
         let add_songs = self.library_view.show_library(ui);
 
         self.playlist.add_songs(add_songs);
@@ -106,23 +120,12 @@ impl App {
 
     fn play_playlist_entry(&mut self, entry: (ListEntryId, SongId)) {
         if let Some(song) = self.library.get_song(&entry.1) {
-            let volume = self.audio_sink.volume();
-
-            // `Sink.stop()` should clear out the sink, and logically should allow playing a
-            // new song. But after calling `stop()` the sink won't play anymore.
-            // So we simply construct a new sink.
-            self.audio_sink.stop();
-            // TODO (Wybe 2022-04-29): Do something other than panic.
-            self.audio_sink = Sink::try_new(&self.stream_handle)
-                .unwrap_or_else(|e| panic!("Could not make a new audio sink: {}", e));
-
-            self.audio_sink.set_volume(volume);
-
-            match library::play_song_from_file(&song.path, &self.audio_sink) {
+            match self.playback.play_file(&song.path) {
                 Ok(()) => self.playlist_selected_song = Some(entry),
                 Err(e) => warn!("Could not play song `{}`: {}", song.path.display(), e),
             }
         }
+        self.playback.unpause();
     }
 
     fn show_playback_controls(&mut self, ui: &mut Ui) {
@@ -131,33 +134,33 @@ impl App {
                 self.play_previous_song();
             }
 
-            if self.audio_sink.is_paused() {
+            if self.playback.is_paused() {
                 if ui.button(">").clicked() {
-                    if self.audio_sink.empty() {
-                        self.play_next_song();
+                    if self.playlist_selected_song.is_some() {
+                        self.playback.unpause();
                     } else {
-                        self.audio_sink.play();
+                        self.play_next_song();
                     }
                 }
             } else if ui.button("||").clicked() {
-                self.audio_sink.pause();
+                self.playback.pause();
             }
 
             if ui.button(">|").clicked() {
                 self.play_next_song();
             }
 
-            let mut volume = self.audio_sink.volume();
-            ui.add(egui::Slider::new(&mut volume, 0.0..=1.0).show_value(false));
-            self.audio_sink.set_volume(volume);
+            let mut volume = self.playback.volume();
+            ui.add(egui::Slider::new(&mut volume, 0..=100).show_value(false));
+            self.playback.set_volume(volume);
 
             ui.add(egui::ProgressBar::new(self.slider_value));
         });
     }
 }
 
-impl epi::App for App {
-    fn update(&mut self, ctx: &egui::Context, _frame: &Frame) {
+impl App for MusicApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
             self.show_playback_controls(ui);
         });
@@ -165,6 +168,7 @@ impl epi::App for App {
             .resizable(true)
             .min_width(10.0)
             .show(ctx, |ui| {
+                // TODO: Add a way of selecting a library.
                 self.show_library(ui);
             });
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -192,36 +196,14 @@ impl epi::App for App {
         });
     }
 
-    fn setup(&mut self, _ctx: &egui::Context, _frame: &Frame, _storage: Option<&dyn Storage>) {
-        if let Err(e) = self.load_config() {
-            warn!("Encountered a problem while loading config: {}", e);
-        }
-
-        if self.config.library_directory.is_dir() {
-            match library::scan_directory_for_songs(&self.config.library_directory) {
-                Ok(songs) => {
-                    self.library.add_songs(songs);
-                    self.library_view.update_items(&self.library);
-                }
-                Err(e) => warn!("Something went wrong while scanning for songs: '{}'", e),
-            }
-        }
-    }
-
-    fn on_exit(&mut self) {
-        if let Err(e) = self.save_config() {
-            warn!("Encountered a problem while saving config: {}", e);
-        }
-    }
-
-    fn name(&self) -> &str {
-        "Example egui App"
+    fn save(&mut self, storage: &mut dyn Storage) {
+        eframe::set_value(storage, eframe::APP_KEY, &self.config);
     }
 }
 
 fn main() -> Result<()> {
     TermLogger::init(
-        LevelFilter::Warn,
+        LevelFilter::Info,
         ConfigBuilder::default()
             .set_thread_level(LevelFilter::Trace)
             .set_target_level(LevelFilter::Trace)
@@ -231,8 +213,11 @@ fn main() -> Result<()> {
     )
     .unwrap();
 
-    let app = App::new();
-
     let native_options = eframe::NativeOptions::default();
-    eframe::run_native(Box::new(app?), native_options);
+
+    eframe::run_native(
+        "Simple music player",
+        native_options,
+        Box::new(|cc| Box::new(MusicApp::new(cc))),
+    );
 }
