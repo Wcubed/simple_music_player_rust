@@ -3,21 +3,21 @@
 
 mod ui;
 
+use crate::egui::Sense;
 use crate::ui::library::LibraryView;
 use crate::ui::playlist::{PlaylistAction, PlaylistView};
 use crate::ui::time_label;
 use anyhow::Result;
-use eframe::egui::{Ui, Visuals};
+use eframe::egui::{Ui, Visuals, Widget};
 use eframe::{egui, App, Storage};
-use log::warn;
 use log::LevelFilter;
+use log::{info, warn};
 use rfd::FileDialog;
 use simple_music_lib::config::Config;
 use simple_music_lib::library;
 use simple_music_lib::library::{Library, ListEntryId, Playlist, SongId};
 use simple_music_lib::playback::Playback;
 use simplelog::{ColorChoice, ConfigBuilder, TermLogger, TerminalMode};
-use std::time::Duration;
 
 struct MusicApp {
     library: Library,
@@ -162,7 +162,21 @@ impl MusicApp {
 
             let fraction_played = seconds_played as f32 / total_length as f32;
 
-            ui.add(egui::ProgressBar::new(fraction_played));
+            let response = egui::ProgressBar::new(fraction_played).ui(ui);
+            // Progress bar doesn't listen for clicks by default, so we do it after it is drawn.
+            let response = response.interact(Sense::click_and_drag());
+
+            if let Some(interact_pos) = response.interact_pointer_pos() {
+                if response.drag_released() || response.clicked() {
+                    let x_on_bar = interact_pos.x - response.rect.min.x;
+                    let bar_width = response.rect.width();
+                    let fraction = x_on_bar / bar_width;
+
+                    let seconds_selected = (total_length as f32 * fraction).floor() as u64;
+
+                    self.playback.seek_seconds_into_song(seconds_selected);
+                }
+            }
 
             if !paused {
                 // TODO: repaint every second.

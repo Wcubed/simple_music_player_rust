@@ -31,9 +31,6 @@ impl Playback {
             Ok(_) => {}
             Err(e) => warn!("Could not pause: {}", e),
         }
-
-        let state: MpvNode = self.mpv.get_property("demuxer-cache-state").unwrap();
-        info!("{:?}", state);
     }
 
     pub fn unpause(&self) {
@@ -56,6 +53,11 @@ impl Playback {
     ///  how much of the song has been played.
     pub fn current_song_seconds_played(&self) -> u64 {
         self.mpv.get_property(PROP_PLAYBACK_TIME).unwrap_or(0) as u64
+    }
+
+    pub fn seek_seconds_into_song(&self, seconds: u64) {
+        // This will return an error when there is no song to be played. We can safely ignore it.
+        self.mpv.seek_absolute(seconds as f64).ok();
     }
 
     pub fn current_song_length_in_seconds(&self) -> u64 {
