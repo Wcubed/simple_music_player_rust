@@ -101,7 +101,15 @@ impl MusicApp {
 
         if let Some(entry) = next_entry {
             self.play_playlist_entry(entry);
+        } else {
+            self.stop_playing();
         }
+    }
+
+    /// Stops playing, and sets the current song to `None`.
+    fn stop_playing(&mut self) {
+        self.playlist_selected_song = None;
+        self.playback.stop();
     }
 
     fn play_previous_song(&mut self) {
@@ -151,8 +159,12 @@ impl MusicApp {
             }
 
             let mut volume = self.playback.volume();
+            let prev_volume = volume;
             ui.add(egui::Slider::new(&mut volume, 0..=100).show_value(false));
-            self.playback.set_volume(volume);
+
+            if volume != prev_volume {
+                self.playback.set_volume(volume);
+            }
 
             let seconds_played = self.playback.current_song_seconds_played();
             let total_length = self.playback.current_song_length_in_seconds();
@@ -178,8 +190,13 @@ impl MusicApp {
                 }
             }
 
+            if seconds_played == total_length && seconds_played != 0 {
+                // Song has ended. Play next song.
+                self.play_next_song();
+            }
+
             if !paused {
-                // TODO: repaint every second.
+                // TODO: repaint ui every second.
             }
         });
     }
@@ -212,6 +229,8 @@ impl App for MusicApp {
                 PlaylistAction::RemoveSong(remove_id) => {
                     if let Some((selected_id, _)) = self.playlist_selected_song {
                         if selected_id == remove_id {
+                            // TODO: Make it not play a song if you remove the last song from the playlist
+                            //   (because the "next song" will be the current song, because it hasn't been removed yet).
                             self.play_next_song();
                         }
                     }

@@ -1,8 +1,6 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::collections::hash_map::Iter;
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
 use log::warn;
@@ -12,6 +10,7 @@ const SONG_EXTENSION: &str = ".ogg";
 #[derive(Debug)]
 pub struct Library {
     songs: HashMap<SongId, Song>,
+    /// Next id to use when inserting a new entry.
     next_id: SongId,
 }
 
@@ -86,6 +85,7 @@ pub struct Song {
 #[derive(Debug)]
 pub struct Playlist {
     songs: Vec<(ListEntryId, SongId)>,
+    /// Next id to use when inserting a new entry.
     next_entry_id: ListEntryId,
 }
 

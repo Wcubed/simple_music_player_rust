@@ -1,4 +1,5 @@
 Uses [mpv](https://mpv.io/) as back-end for playing the music.
+This needs to be installed to run the program.
 
 # Building
 
