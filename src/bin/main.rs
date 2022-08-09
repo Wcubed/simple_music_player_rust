@@ -5,6 +5,7 @@ mod ui;
 
 use crate::egui::Sense;
 use crate::ui::library::LibraryView;
+use crate::ui::playback_controls::{PlaybackCommand, PlaybackControls};
 use crate::ui::playlist::{PlaylistAction, PlaylistView};
 use crate::ui::time_label;
 use anyhow::Result;
@@ -25,6 +26,7 @@ struct MusicApp {
     playlist_selected_song: Option<(ListEntryId, SongId)>,
     playlist_view: PlaylistView,
     library_view: LibraryView,
+    playback_controls: PlaybackControls,
     config: Config,
     playback: Playback,
 }
@@ -54,6 +56,7 @@ impl MusicApp {
             playlist_selected_song: None,
             playlist_view: PlaylistView::new(),
             library_view: LibraryView::new(),
+            playback_controls: PlaybackControls::new(),
             config,
             playback: Playback::new(),
         };
@@ -136,40 +139,30 @@ impl MusicApp {
 
     fn show_playback_controls(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui| {
-            if ui.button("|<").clicked() {
-                self.play_previous_song();
-            }
-
             let paused = self.playback.is_paused();
-
-            if paused {
-                if ui.button(">").clicked() {
-                    if self.playlist_selected_song.is_some() {
-                        self.playback.unpause();
-                    } else {
-                        self.play_next_song();
-                    }
-                }
-            } else if ui.button("||").clicked() {
-                self.playback.pause();
-            }
-
-            if ui.button(">|").clicked() {
-                self.play_next_song();
-            }
-
             let mut volume = self.playback.volume();
-            let prev_volume = volume;
-            ui.add(egui::Slider::new(&mut volume, 0..=100).show_value(false));
 
-            if volume != prev_volume {
-                self.playback.set_volume(volume);
+            if let Some(command) = self.playback_controls.show(ui, paused, volume) {
+                match command {
+                    PlaybackCommand::Pause => self.playback.pause(),
+                    PlaybackCommand::Unpause => {
+                        if self.playlist_selected_song.is_some() {
+                            self.playback.unpause();
+                        } else {
+                            self.play_next_song();
+                        }
+                    }
+                    PlaybackCommand::NextSong => self.play_next_song(),
+                    PlaybackCommand::PreviousSong => self.play_previous_song(),
+                    PlaybackCommand::SetVolume(new_volume) => self.playback.set_volume(new_volume),
+                }
             }
 
             let seconds_played = self.playback.current_song_seconds_played();
             let total_length = self.playback.current_song_length_in_seconds();
 
             time_label(ui, seconds_played);
+            ui.label("/");
             time_label(ui, total_length);
 
             let fraction_played = seconds_played as f32 / total_length as f32;
@@ -186,7 +179,9 @@ impl MusicApp {
 
                     let seconds_selected = (total_length as f32 * fraction).floor() as u64;
 
-                    self.playback.seek_seconds_into_song(seconds_selected);
+                    if self.playlist_selected_song.is_some() {
+                        self.playback.seek_seconds_into_song(seconds_selected);
+                    }
                 }
             }
 

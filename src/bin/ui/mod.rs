@@ -1,6 +1,7 @@
 use eframe::egui::Ui;
 
 pub mod library;
+pub mod playback_controls;
 pub mod playlist;
 
 pub fn time_label(ui: &mut Ui, seconds: u64) {
