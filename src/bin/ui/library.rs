@@ -35,6 +35,16 @@ impl LibraryView {
 
     /// Returns a list of songs to add to the playlist.
     pub fn show_library(&mut self, ui: &mut Ui) -> Vec<SongId> {
+        if self.filtered_items.len() == self.unfiltered_items.len() {
+            ui.label(format!("{} songs", self.unfiltered_items.len()));
+        } else {
+            ui.label(format!(
+                "{} / {} songs",
+                self.filtered_items.len(),
+                self.unfiltered_items.len()
+            ));
+        }
+
         let prev_filter_string = self.filter_string.clone();
 
         let filter_edit = egui::TextEdit::singleline(&mut self.filter_string).hint_text("Search");
