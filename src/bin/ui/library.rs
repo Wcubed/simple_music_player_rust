@@ -1,5 +1,5 @@
 use eframe::egui;
-use eframe::egui::Ui;
+use eframe::egui::{Key, Ui};
 use simple_music_lib::library::{Library, Song, SongId};
 
 pub struct LibraryView {
@@ -34,7 +34,21 @@ impl LibraryView {
     }
 
     /// Returns a list of songs to add to the playlist.
-    pub fn show_library(&mut self, ui: &mut Ui) -> Vec<SongId> {
+    pub fn show_library_search_widget(&mut self, ui: &mut Ui) -> Vec<SongId> {
+        let prev_filter_string = self.filter_string.clone();
+
+        // TODO: somehow keep or return focus to the edit after the "enter" key is pressed.
+        let filter_edit = egui::TextEdit::singleline(&mut self.filter_string)
+            .hint_text("Search")
+            .desired_width(200.0);
+
+        let filter_edit_enter_pressed =
+            ui.add(filter_edit).lost_focus() && ui.input().key_pressed(Key::Enter);
+
+        if prev_filter_string != self.filter_string {
+            self.update_filter_string(self.filter_string.clone());
+        }
+
         if self.filtered_items.len() == self.unfiltered_items.len() {
             ui.label(format!("{} songs", self.unfiltered_items.len()));
         } else {
@@ -45,21 +59,33 @@ impl LibraryView {
             ));
         }
 
-        let prev_filter_string = self.filter_string.clone();
+        let mut add_songs = Vec::new();
 
-        let filter_edit = egui::TextEdit::singleline(&mut self.filter_string).hint_text("Search");
-        ui.add(filter_edit);
+        if filter_edit_enter_pressed {
+            if let Some(&(first_id, _)) = self.filtered_items.first() {
+                add_songs.push(first_id);
+            }
 
-        if prev_filter_string != self.filter_string {
-            let lowercase_filter = self.filter_string.to_lowercase();
-            self.filtered_items = self
-                .unfiltered_items
-                .iter()
-                .filter(|(_, song)| song.title.to_lowercase().contains(&lowercase_filter))
-                .cloned()
-                .collect();
+            self.update_filter_string(String::new());
         }
 
+        add_songs
+    }
+
+    fn update_filter_string(&mut self, new_string: String) {
+        self.filter_string = new_string;
+
+        let lowercase_filter = self.filter_string.to_lowercase();
+        self.filtered_items = self
+            .unfiltered_items
+            .iter()
+            .filter(|(_, song)| song.title.to_lowercase().contains(&lowercase_filter))
+            .cloned()
+            .collect();
+    }
+
+    /// Returns a list of songs to add to the playlist.
+    pub fn show_library(&mut self, ui: &mut Ui) -> Vec<SongId> {
         let mut add_songs = Vec::new();
 
         let text_style = egui::TextStyle::Body;

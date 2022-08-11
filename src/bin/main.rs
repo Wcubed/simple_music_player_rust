@@ -82,14 +82,6 @@ impl MusicApp {
     }
 
     fn show_library(&mut self, ui: &mut Ui) {
-        if ui.button("Select library directory").clicked() {
-            if let Some(dir) = FileDialog::new().pick_folder() {
-                // TODO: let the user know when error occured, with a pop-up or something like that.
-                self.config.library_directory = dir;
-                self.scan_library_dir();
-            }
-        }
-
         let add_songs = self.library_view.show_library(ui);
 
         self.playlist.add_songs(add_songs);
@@ -140,7 +132,7 @@ impl MusicApp {
     fn show_playback_controls(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui| {
             let paused = self.playback.is_paused();
-            let mut volume = self.playback.volume();
+            let volume = self.playback.volume();
 
             if let Some(command) = self.playback_controls.show(ui, paused, volume) {
                 match command {
@@ -199,6 +191,21 @@ impl MusicApp {
 
 impl App for MusicApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                if ui.button("Select library directory").clicked() {
+                    if let Some(dir) = FileDialog::new().pick_folder() {
+                        // TODO: let the user know when error occured, with a pop-up or something like that.
+                        self.config.library_directory = dir;
+                        self.scan_library_dir();
+                    }
+                }
+
+                let add_songs = self.library_view.show_library_search_widget(ui);
+                self.playlist.add_songs(add_songs);
+            });
+        });
+
         egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
             self.show_playback_controls(ui);
         });
