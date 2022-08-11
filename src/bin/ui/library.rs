@@ -1,5 +1,5 @@
 use eframe::egui;
-use eframe::egui::{Key, Ui};
+use eframe::egui::{Key, Modifiers, Ui};
 use simple_music_lib::library::{Library, Song, SongId};
 
 pub struct LibraryView {
@@ -38,12 +38,19 @@ impl LibraryView {
         let prev_filter_string = self.filter_string.clone();
 
         // TODO: somehow keep or return focus to the edit after the "enter" key is pressed.
-        let filter_edit = egui::TextEdit::singleline(&mut self.filter_string)
+        let search_bar = egui::TextEdit::singleline(&mut self.filter_string)
             .hint_text("Search")
             .desired_width(200.0);
+        let search_bar_response = ui.add(search_bar);
 
-        let filter_edit_enter_pressed =
-            ui.add(filter_edit).lost_focus() && ui.input().key_pressed(Key::Enter);
+        let search_bar_enter_pressed =
+            search_bar_response.lost_focus() && ui.input().key_pressed(Key::Enter);
+
+        // Ctrl-F focuses on the search bar.
+        // TODO: Have an app-wide way of detecting shortcuts?
+        if ui.input().key_pressed(Key::F) && ui.input().modifiers.matches(Modifiers::COMMAND) {
+            search_bar_response.request_focus();
+        }
 
         if prev_filter_string != self.filter_string {
             self.update_filter_string(self.filter_string.clone());
@@ -61,12 +68,19 @@ impl LibraryView {
 
         let mut add_songs = Vec::new();
 
-        if filter_edit_enter_pressed {
+        if search_bar_enter_pressed {
             if let Some(&(first_id, _)) = self.filtered_items.first() {
                 add_songs.push(first_id);
+
+                // Clear the search bar
+                self.update_filter_string(String::new());
             }
 
-            self.update_filter_string(String::new());
+            // Because by default egui loses focus on a TextEdit when the enter key is pressed
+            // we need to re-focus on it.
+            // Especially if no song was found, because then we haven't
+            // actually done anything yet.
+            search_bar_response.request_focus();
         }
 
         add_songs
