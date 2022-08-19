@@ -45,6 +45,12 @@ impl LibraryView {
         let search_bar_enter_pressed =
             search_bar_response.lost_focus() && ui.input().key_pressed(Key::Enter);
 
+        if search_bar_response.lost_focus() && ui.input().key_pressed(Key::Escape) {
+            // Pressing escape drops focus from a text entry.
+            // For the search bar it makes sense for escape to additionally clear the value.
+            self.filter_string = String::new();
+        }
+
         // Ctrl-F focuses on the search bar.
         // TODO: Have an app-wide way of detecting shortcuts?
         if ui.input().key_pressed(Key::F) && ui.input().modifiers.matches(Modifiers::COMMAND) {
