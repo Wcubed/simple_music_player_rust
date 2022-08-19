@@ -22,6 +22,10 @@ impl Library {
         }
     }
 
+    pub fn clear(&mut self) {
+        self.songs.clear();
+    }
+
     pub fn songs(&self) -> Iter<'_, SongId, Song> {
         self.songs.iter()
     }
@@ -103,6 +107,10 @@ impl Playlist {
             songs: Vec::new(),
             next_entry_id: ListEntryId(0),
         }
+    }
+
+    pub fn clear(&mut self) {
+        self.songs.clear();
     }
 
     pub fn song_ids(&self) -> core::slice::Iter<'_, (ListEntryId, SongId)> {

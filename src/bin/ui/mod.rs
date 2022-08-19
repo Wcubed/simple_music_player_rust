@@ -1,5 +1,6 @@
 use eframe::egui::Ui;
 
+pub mod config_ui;
 pub mod library;
 pub mod playback_controls;
 pub mod playlist;

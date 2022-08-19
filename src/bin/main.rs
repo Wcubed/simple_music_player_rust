@@ -4,6 +4,7 @@
 mod ui;
 
 use crate::egui::Sense;
+use crate::ui::config_ui::ConfigView;
 use crate::ui::library::LibraryView;
 use crate::ui::playback_controls::{PlaybackCommand, PlaybackControls};
 use crate::ui::playlist::{PlaylistAction, PlaylistView};
@@ -13,7 +14,6 @@ use eframe::egui::{Ui, Visuals, Widget};
 use eframe::{egui, App, Storage};
 use log::LevelFilter;
 use log::{info, warn};
-use rfd::FileDialog;
 use simple_music_lib::config::Config;
 use simple_music_lib::library;
 use simple_music_lib::library::{Library, ListEntryId, Playlist, SongId};
@@ -28,6 +28,7 @@ struct MusicApp {
     library_view: LibraryView,
     playback_controls: PlaybackControls,
     config: Config,
+    config_view: ConfigView,
     playback: Playback,
 }
 
@@ -58,6 +59,7 @@ impl MusicApp {
             library_view: LibraryView::new(),
             playback_controls: PlaybackControls::new(),
             config,
+            config_view: ConfigView::new(),
             playback: Playback::new(),
         };
 
@@ -71,6 +73,9 @@ impl MusicApp {
     ///       and update those that are already in the library.
     fn scan_library_dir(&mut self) {
         if self.config.library_directory.is_dir() {
+            self.library.clear();
+            self.playlist.clear();
+
             match library::scan_directory_for_songs(&self.config.library_directory) {
                 Ok(songs) => {
                     self.library.add_songs(songs);
@@ -230,14 +235,18 @@ impl MusicApp {
 
 impl App for MusicApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let prev_library_directory = self.config.library_directory.clone();
+
+        self.config_view.show(ctx, &mut self.config);
+
+        if prev_library_directory != self.config.library_directory {
+            self.scan_library_dir();
+        }
+
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                if ui.button("Select library directory").clicked() {
-                    if let Some(dir) = FileDialog::new().pick_folder() {
-                        // TODO: let the user know when error occured, with a pop-up or something like that.
-                        self.config.library_directory = dir;
-                        self.scan_library_dir();
-                    }
+                if ui.button("Config").clicked() {
+                    self.config_view.open_window();
                 }
 
                 let add_songs = self.library_view.show_library_search_widget(ui);
