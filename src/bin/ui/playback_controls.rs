@@ -13,7 +13,13 @@ impl PlaybackControls {
         }
     }
 
-    pub fn show(&self, ui: &mut Ui, paused: bool, volume: i64) -> Option<PlaybackCommand> {
+    pub fn show(
+        &self,
+        ui: &mut Ui,
+        paused: bool,
+        volume: i64,
+        infinite_playlist: &mut bool,
+    ) -> Option<PlaybackCommand> {
         let mut command = None;
 
         // TODO: implement actual playback controls.
@@ -32,6 +38,8 @@ impl PlaybackControls {
         if image_button(ui, &self.icons.next_song).clicked() {
             command = Some(PlaybackCommand::NextSong);
         }
+
+        ui.checkbox(infinite_playlist, "Infinite");
 
         match volume {
             0..=33 => {

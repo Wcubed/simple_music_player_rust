@@ -134,7 +134,10 @@ impl MusicApp {
             let paused = self.playback.is_paused();
             let volume = self.playback.volume();
 
-            if let Some(command) = self.playback_controls.show(ui, paused, volume) {
+            if let Some(command) =
+                self.playback_controls
+                    .show(ui, paused, volume, &mut self.config.infinite_playlist)
+            {
                 match command {
                     PlaybackCommand::Pause => self.playback.pause(),
                     PlaybackCommand::Unpause => {
@@ -209,13 +212,16 @@ impl App for MusicApp {
         egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
             self.show_playback_controls(ui);
         });
-        egui::SidePanel::right("right_panel")
-            .resizable(true)
-            .min_width(10.0)
-            .show(ctx, |ui| {
-                // TODO: Add a way of selecting a library.
-                self.show_library(ui);
-            });
+
+        if self.library_view.should_show_library() {
+            egui::SidePanel::right("right_panel")
+                .resizable(true)
+                .min_width(10.0)
+                .show(ctx, |ui| {
+                    self.show_library(ui);
+                });
+        }
+
         egui::CentralPanel::default().show(ctx, |ui| {
             let action = self.playlist_view.show(
                 ui,

@@ -37,7 +37,6 @@ impl LibraryView {
     pub fn show_library_search_widget(&mut self, ui: &mut Ui) -> Vec<SongId> {
         let prev_filter_string = self.filter_string.clone();
 
-        // TODO: somehow keep or return focus to the edit after the "enter" key is pressed.
         let search_bar = egui::TextEdit::singleline(&mut self.filter_string)
             .hint_text("Search")
             .desired_width(200.0);
@@ -96,6 +95,11 @@ impl LibraryView {
             .filter(|(_, song)| song.title.to_lowercase().contains(&lowercase_filter))
             .cloned()
             .collect();
+    }
+
+    /// Whether or not the library wants to be displayed or not.
+    pub fn should_show_library(&self) -> bool {
+        !self.filter_string.is_empty()
     }
 
     /// Returns a list of songs to add to the playlist.
