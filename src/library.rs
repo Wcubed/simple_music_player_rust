@@ -137,6 +137,10 @@ impl Playlist {
         self.next_entry_id = self.next_entry_id.next();
     }
 
+    pub fn get_song_index(&self, entry_id: ListEntryId) -> Option<usize> {
+        self.songs.iter().position(|(id, _)| id == &entry_id)
+    }
+
     pub fn song_count(&self) -> usize {
         self.songs.len()
     }
@@ -173,7 +177,7 @@ impl Playlist {
         &self,
         current_entry: ListEntryId,
     ) -> Option<(ListEntryId, SongId, usize)> {
-        if let Some(idx) = self.songs.iter().position(|(id, _)| id == &current_entry) {
+        if let Some(idx) = self.get_song_index(current_entry) {
             if idx < self.songs.len() - 1 {
                 let next_idx = idx + 1;
                 self.songs
@@ -190,10 +194,17 @@ impl Playlist {
 
     /// Returns None if there is no previous entry, or if the given entry is not in the playlist.
     /// Loops to the last song if the first song is given.
-    pub fn get_previous_entry(&self, current_entry: ListEntryId) -> Option<(ListEntryId, SongId)> {
+    pub fn get_previous_entry(
+        &self,
+        current_entry: ListEntryId,
+    ) -> Option<(ListEntryId, SongId, usize)> {
         if let Some(idx) = self.songs.iter().position(|(id, _)| id == &current_entry) {
             if idx != 0 {
-                self.songs.get(idx - 1).copied()
+                let prev_entry = idx - 1;
+                self.songs
+                    .get(prev_entry)
+                    .copied()
+                    .map(|(entry_id, song_id)| (entry_id, song_id, prev_entry))
             } else {
                 self.get_last_entry()
             }
@@ -209,8 +220,11 @@ impl Playlist {
             .map(|(entry_id, song_id)| (entry_id, song_id, 0))
     }
 
-    pub fn get_last_entry(&self) -> Option<(ListEntryId, SongId)> {
-        self.songs.last().copied()
+    pub fn get_last_entry(&self) -> Option<(ListEntryId, SongId, usize)> {
+        self.songs
+            .last()
+            .copied()
+            .map(|(entry_id, song_id)| (entry_id, song_id, self.songs.len() - 1))
     }
 }
 

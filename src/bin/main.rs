@@ -99,31 +99,8 @@ impl MusicApp {
             self.playlist.get_first_entry()
         };
 
-        if let Some((list_id, song_id, list_idx)) = next_entry {
-            self.play_playlist_entry((list_id, song_id));
-
-            if self.config.infinite_playlist {
-                // Fill the playlist with random songs until we have the desired amount of buffer.
-                let songs_in_buffer = self.playlist.length() - (list_idx + 1);
-                let desired_buffer = self.config.infinite_playlist_song_buffer as usize;
-
-                if songs_in_buffer < desired_buffer {
-                    for _ in songs_in_buffer..desired_buffer {
-                        if let Some(&random_song) = self.library.get_random_song_id() {
-                            self.playlist.add_song(random_song);
-                        }
-                    }
-                }
-
-                // Remove songs from the back until we are left with the desired amount of rear buffer.
-                let songs_in_rear_buffer = list_idx;
-                let desired_rear_buffer = self.config.infinite_playlist_song_rear_buffer as usize;
-                if songs_in_rear_buffer > desired_rear_buffer {
-                    for _ in desired_rear_buffer..songs_in_rear_buffer {
-                        self.playlist.remove_song_by_index(0);
-                    }
-                }
-            }
+        if let Some(entry) = next_entry {
+            self.play_playlist_entry(entry);
         } else {
             // No more songs in the list.
             if self.config.infinite_playlist {
@@ -149,25 +126,51 @@ impl MusicApp {
     }
 
     fn play_previous_song(&mut self) {
-        let next_entry = if let Some(cur_entry) = self.playlist_selected_song {
+        let prev_entry = if let Some(cur_entry) = self.playlist_selected_song {
             self.playlist.get_previous_entry(cur_entry.0)
         } else {
             self.playlist.get_last_entry()
         };
 
-        if let Some(entry) = next_entry {
+        if let Some(entry) = prev_entry {
             self.play_playlist_entry(entry);
         }
     }
 
-    fn play_playlist_entry(&mut self, entry: (ListEntryId, SongId)) {
-        if let Some(song) = self.library.get_song(&entry.1) {
+    fn play_playlist_entry(
+        &mut self,
+        (entry_id, song_id, entry_index): (ListEntryId, SongId, usize),
+    ) {
+        if let Some(song) = self.library.get_song(&song_id) {
             match self.playback.play_file(&song.path) {
-                Ok(()) => self.playlist_selected_song = Some(entry),
+                Ok(()) => self.playlist_selected_song = Some((entry_id, song_id)),
                 Err(e) => warn!("Could not play song `{}`: {}", song.path.display(), e),
             }
         }
         self.playback.unpause();
+
+        if self.config.infinite_playlist {
+            // Fill the playlist with random songs until we have the desired amount of buffer.
+            let songs_in_buffer = self.playlist.length() - (entry_index + 1);
+            let desired_buffer = self.config.infinite_playlist_song_buffer as usize;
+
+            if songs_in_buffer < desired_buffer {
+                for _ in songs_in_buffer..desired_buffer {
+                    if let Some(&random_song) = self.library.get_random_song_id() {
+                        self.playlist.add_song(random_song);
+                    }
+                }
+            }
+
+            // Remove songs from the back until we are left with the desired amount of rear buffer.
+            let songs_in_rear_buffer = entry_index;
+            let desired_rear_buffer = self.config.infinite_playlist_song_rear_buffer as usize;
+            if songs_in_rear_buffer > desired_rear_buffer {
+                for _ in desired_rear_buffer..songs_in_rear_buffer {
+                    self.playlist.remove_song_by_index(0);
+                }
+            }
+        }
     }
 
     fn show_playback_controls(&mut self, ui: &mut Ui) {
@@ -276,8 +279,10 @@ impl App for MusicApp {
             );
 
             match action {
-                PlaylistAction::PlaySong(entry) => {
-                    self.play_playlist_entry(entry);
+                PlaylistAction::PlaySong((list_entry, song_id)) => {
+                    if let Some(index) = self.playlist.get_song_index(list_entry) {
+                        self.play_playlist_entry((list_entry, song_id, index));
+                    }
                 }
                 PlaylistAction::RemoveSong(remove_id) => {
                     if let Some((selected_id, _)) = self.playlist_selected_song {
