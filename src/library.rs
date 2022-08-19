@@ -40,12 +40,20 @@ impl Library {
         }
     }
 
+    pub fn song_count(&self) -> usize {
+        self.songs.len()
+    }
+
     pub fn get_song(&self, id: &SongId) -> Option<&Song> {
         self.songs.get(id)
     }
 
-    pub fn song_count(&self) -> usize {
-        self.songs.len()
+    pub fn get_random_song_id(&self) -> Option<&SongId> {
+        // TODO: This is not the fastest implementation,
+        //  since it needs to iter over a lot of the library.
+        //  But since it is only called every now and then, for now it is fine.
+        let random_index = rand::random::<usize>() % self.songs.len();
+        self.songs.keys().nth(random_index)
     }
 }
 
@@ -137,6 +145,10 @@ impl Playlist {
         }
     }
 
+    pub fn remove_song_by_index(&mut self, index: usize) {
+        self.songs.remove(index);
+    }
+
     pub fn move_from_index_to_target_index(&mut self, from: usize, target: usize) {
         if from >= self.songs.len() {
             return;
@@ -147,10 +159,19 @@ impl Playlist {
     }
 
     /// Returns None if there is no next entry, or if the given entry is not in the playlist.
-    pub fn get_next_entry(&self, current_entry: ListEntryId) -> Option<(ListEntryId, SongId)> {
+    /// Loops to the first song if the last song is given.
+    /// Also gives the index of the song in the playlist.
+    pub fn get_next_entry(
+        &self,
+        current_entry: ListEntryId,
+    ) -> Option<(ListEntryId, SongId, usize)> {
         if let Some(idx) = self.songs.iter().position(|(id, _)| id == &current_entry) {
             if idx < self.songs.len() - 1 {
-                self.songs.get(idx + 1).copied()
+                let next_idx = idx + 1;
+                self.songs
+                    .get(next_idx)
+                    .copied()
+                    .map(|(entry_id, song_id)| (entry_id, song_id, next_idx))
             } else {
                 self.get_first_entry()
             }
@@ -160,6 +181,7 @@ impl Playlist {
     }
 
     /// Returns None if there is no previous entry, or if the given entry is not in the playlist.
+    /// Loops to the last song if the first song is given.
     pub fn get_previous_entry(&self, current_entry: ListEntryId) -> Option<(ListEntryId, SongId)> {
         if let Some(idx) = self.songs.iter().position(|(id, _)| id == &current_entry) {
             if idx != 0 {
@@ -172,8 +194,11 @@ impl Playlist {
         }
     }
 
-    pub fn get_first_entry(&self) -> Option<(ListEntryId, SongId)> {
-        self.songs.first().copied()
+    pub fn get_first_entry(&self) -> Option<(ListEntryId, SongId, usize)> {
+        self.songs
+            .first()
+            .copied()
+            .map(|(entry_id, song_id)| (entry_id, song_id, 0))
     }
 
     pub fn get_last_entry(&self) -> Option<(ListEntryId, SongId)> {
