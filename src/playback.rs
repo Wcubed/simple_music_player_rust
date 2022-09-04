@@ -1,5 +1,5 @@
-use libmpv::{FileState, Mpv, MpvNode};
-use log::{error, info, warn};
+use libmpv::{FileState, Mpv};
+use log::warn;
 use std::path::Path;
 
 const PROP_VOLUME: &str = "volume";

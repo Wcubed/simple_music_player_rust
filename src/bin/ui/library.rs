@@ -1,4 +1,3 @@
-use crate::egui::Image;
 use eframe::egui;
 use eframe::egui::{Key, Modifiers, Ui};
 use simple_music_lib::image_cache::ImageCache;

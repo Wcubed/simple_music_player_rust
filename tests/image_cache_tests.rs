@@ -1,6 +1,6 @@
 use eframe::egui::Context;
 use simple_music_lib::image_cache::ImageCache;
-use simple_music_lib::library::{Library, Song, SongId};
+use simple_music_lib::library::{Library, Song};
 use std::path::PathBuf;
 use test_log::test;
 
@@ -23,7 +23,7 @@ fn test_load_image_from_song() {
 
     // Act
     cache.load_image_from_song_path(
-        ctx,
+        &ctx,
         &PathBuf::from(TEST_LIBRARY_DIRECTORY).join("noise.ogg"),
         id,
     );
