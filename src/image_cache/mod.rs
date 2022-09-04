@@ -20,7 +20,7 @@ impl ImageCache {
     /// TODO: Load in the background.
     /// TODO: Allow specifying resizing the image, and caching those smaller images on disk.
     /// TODO: If there is already an image in the cache for this song, how do we make egui drop the texture for it?
-    pub fn load_image_from_song_path(&mut self, ctx: Context, song_path: &Path, song_id: SongId) {
+    pub fn load_image_from_song_path(&mut self, ctx: &Context, song_path: &Path, song_id: SongId) {
         let image_extensions = ["jpg", "png", "webp"];
         let file_name = match song_path.file_stem() {
             Some(value) => value,

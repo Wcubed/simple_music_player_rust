@@ -1,5 +1,7 @@
+use crate::egui::Image;
 use eframe::egui;
 use eframe::egui::{Key, Modifiers, Ui};
+use simple_music_lib::image_cache::ImageCache;
 use simple_music_lib::library::{Library, Song, SongId};
 
 pub struct LibraryView {
@@ -109,7 +111,7 @@ impl LibraryView {
     }
 
     /// Returns a list of songs to add to the playlist.
-    pub fn show_library(&mut self, ui: &mut Ui) -> Vec<SongId> {
+    pub fn show_library(&mut self, ui: &mut Ui, image_cache: &ImageCache) -> Vec<SongId> {
         let mut add_songs = Vec::new();
 
         let text_style = egui::TextStyle::Body;
@@ -123,7 +125,7 @@ impl LibraryView {
                 self.filtered_items.len(),
                 |ui, row_range| {
                     egui::Grid::new("library_grid")
-                        .num_columns(2)
+                        .num_columns(3)
                         .start_row(row_range.start)
                         .min_col_width(1.0)
                         .striped(true)
@@ -134,7 +136,7 @@ impl LibraryView {
                                 .skip(row_range.start)
                                 .take(row_range.end)
                             {
-                                if self.show_song(ui, song) {
+                                if self.show_song(ui, row_height, song, *id, image_cache) {
                                     add_songs.push(*id);
                                 }
                             }
@@ -145,8 +147,25 @@ impl LibraryView {
         add_songs
     }
 
-    fn show_song(&self, ui: &mut Ui, song: &Song) -> bool {
+    /// Returns if the "add song to playlist" button is pressed or not.
+    fn show_song(
+        &self,
+        ui: &mut Ui,
+        row_height: f32,
+        song: &Song,
+        song_id: SongId,
+        image_cache: &ImageCache,
+    ) -> bool {
         let add_song = ui.button("+").clicked();
+
+        // TODO: allow caching and retrieving pre-scaled versions of images.
+        if let Some(texture_handle) = image_cache.get_texture_handle(song_id) {
+            // TODO: get image width scaled relative to it's normal height, and not the target height.
+            ui.image(texture_handle, [row_height / 9.0 * 16.0, row_height]);
+        } else {
+            ui.label("");
+        }
+
         ui.label(&song.title).on_hover_text(&song.title);
 
         ui.end_row();

@@ -15,6 +15,7 @@ use eframe::{egui, App, Storage};
 use log::LevelFilter;
 use log::{info, warn};
 use simple_music_lib::config::Config;
+use simple_music_lib::image_cache::ImageCache;
 use simple_music_lib::library;
 use simple_music_lib::library::{Library, ListEntryId, Playlist, SongId};
 use simple_music_lib::playback::Playback;
@@ -31,6 +32,7 @@ struct MusicApp {
     config: Config,
     config_view: ConfigView,
     playback: Playback,
+    image_cache: ImageCache,
 }
 
 impl MusicApp {
@@ -54,9 +56,10 @@ impl MusicApp {
             config,
             config_view: ConfigView::new(),
             playback: Playback::new(),
+            image_cache: ImageCache::new(),
         };
 
-        app.scan_library_dir();
+        app.scan_library_dir(&cc.egui_ctx);
 
         app
     }
@@ -64,7 +67,7 @@ impl MusicApp {
     /// Scans the library directory for songs.
     /// TODO: remove any songs that are no longer in the directory, add any that are new,
     ///       and update those that are already in the library.
-    fn scan_library_dir(&mut self) {
+    fn scan_library_dir(&mut self, ctx: &egui::Context) {
         if self.config.library_directory.is_dir() {
             self.library.clear();
             self.playlist.clear();
@@ -73,6 +76,11 @@ impl MusicApp {
                 Ok(songs) => {
                     self.library.add_songs(songs);
                     self.library_view.update_items(&self.library);
+
+                    for (&id, song) in self.library.songs() {
+                        self.image_cache
+                            .load_image_from_song_path(ctx, &song.path, id);
+                    }
                 }
                 Err(e) => warn!("Something went wrong while scanning for songs: '{}'", e),
             }
@@ -80,7 +88,7 @@ impl MusicApp {
     }
 
     fn show_library(&mut self, ui: &mut Ui) {
-        let add_songs = self.library_view.show_library(ui);
+        let add_songs = self.library_view.show_library(ui, &self.image_cache);
 
         self.playlist.add_songs(add_songs);
     }
@@ -239,7 +247,7 @@ impl App for MusicApp {
         self.config_view.show(ctx, &mut self.config);
 
         if prev_library_directory != self.config.library_directory {
-            self.scan_library_dir();
+            self.scan_library_dir(ctx);
         }
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -271,6 +279,7 @@ impl App for MusicApp {
                 ui,
                 &mut self.playlist,
                 &self.library,
+                &self.image_cache,
                 self.playlist_selected_song,
             );
 
