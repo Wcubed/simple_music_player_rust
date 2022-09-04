@@ -2,6 +2,7 @@ use anyhow::Result;
 use simple_music_lib::library;
 use simple_music_lib::library::Song;
 use std::path::PathBuf;
+use test_log::test;
 
 const TEST_LIBRARY_DIRECTORY: &str = "test_assets/test_library";
 

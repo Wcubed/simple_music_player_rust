@@ -9,3 +9,7 @@ For more info on the mpv part of the build, see the [libmpv-rs](https://github.c
 - Clone the [mpv-build](https://github.com/mpv-player/mpv-build) repo into a folder you can find later.
 - Set the `MPV_SOURCE` environment variable to the directory containing the mpv-build repo.
 - Run `cargo build` in the directory containing `Cargo.toml`.
+
+# Testing
+
+To see all log messages during `cargo test`, run it with the `RUST_LOG=trace` environment variable.

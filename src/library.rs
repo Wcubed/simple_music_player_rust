@@ -291,6 +291,7 @@ fn song_from_file_path<P: AsRef<Path>>(file_path: P) -> Option<Song> {
 mod test {
     use crate::library::{Library, ListEntryId, Playlist, Song, SongId};
     use std::path::PathBuf;
+    use test_log::test;
 
     #[test]
     fn library_new_library_is_empty() {
