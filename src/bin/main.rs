@@ -19,6 +19,7 @@ use simple_music_lib::library;
 use simple_music_lib::library::{Library, ListEntryId, Playlist, SongId};
 use simple_music_lib::playback::Playback;
 use simplelog::{ColorChoice, ConfigBuilder, TermLogger, TerminalMode};
+use std::time::Duration;
 
 struct MusicApp {
     library: Library,
@@ -40,15 +41,7 @@ impl MusicApp {
             Default::default()
         };
 
-        let visuals = if let Some(dark_mode) = cc.integration_info.prefer_dark_mode {
-            if dark_mode {
-                Visuals::dark()
-            } else {
-                Visuals::light()
-            }
-        } else {
-            Visuals::dark()
-        };
+        let visuals = Visuals::dark();
         cc.egui_ctx.set_visuals(visuals);
 
         let mut app = Self {
@@ -230,7 +223,10 @@ impl MusicApp {
             }
 
             if !paused {
-                // TODO: repaint ui every second.
+                // If we are playing music, we need to update the UI periodically,
+                // otherwise the song progress will not be shown.
+                // And we would not realize that a song has finished playing.
+                ui.ctx().request_repaint_after(Duration::from_secs(1));
             }
         });
     }
@@ -304,7 +300,7 @@ impl App for MusicApp {
     }
 }
 
-fn main() -> Result<()> {
+fn main() {
     TermLogger::init(
         LevelFilter::Info,
         ConfigBuilder::default()

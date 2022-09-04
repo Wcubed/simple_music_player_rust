@@ -14,8 +14,8 @@ name = "simple_music_player"
 path = "src/bin/main.rs"
 
 [dependencies]
-eframe = { version = "0.18", features = ["persistence"] }
-egui_extras = { version = "0.18", features = ["svg"] }
+eframe = { version = "0.19", features = ["persistence"] }
+egui_extras = { version = "0.19", features = ["svg"] }
 
 libmpv = { version = "2.0", features = ["build_libmpv"]}
 rfd = "0.10"

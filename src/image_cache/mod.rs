@@ -1,5 +1,5 @@
 use crate::library::SongId;
-use eframe::egui::{ColorImage, Context, TextureHandle};
+use eframe::egui::{ColorImage, Context, TextureFilter, TextureHandle};
 use log::{debug, warn};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -66,8 +66,10 @@ impl ImageCache {
         };
 
         if let Some(data) = image_data {
-            self.images
-                .insert(song_id, ctx.load_texture(file_name.to_string_lossy(), data));
+            self.images.insert(
+                song_id,
+                ctx.load_texture(file_name.to_string_lossy(), data, TextureFilter::Linear),
+            );
         } else {
             debug!(
                 "No image found for song `{}` in directory `{}`",
