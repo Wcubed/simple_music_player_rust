@@ -1,0 +1,20 @@
+on:
+  pull_request:
+    branches:
+      - main
+name: "Duplicate release version check"
+
+jobs:
+  version-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: git fetch --all --tags
+      - name: Check Release Version
+        uses: thebongy/version-check@v1
+        with:
+          file: Cargo.toml
+          tagFormat: v${version}
+        id: version_check_staging
+      - name: Echo release version
+        run: echo "Version ${{steps.version_check_staging.outputs.releaseVersion}}"

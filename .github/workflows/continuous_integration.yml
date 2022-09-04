@@ -31,6 +31,9 @@ jobs:
           toolchain: stable
           override: true
       - uses: ./.github/actions/install-linux-dependencies
+      - uses: ConorMacBride/install-package@v1
+        with:
+          apt: libmpv-dev
       - uses: actions-rs/cargo@v1
         with:
           command: test
